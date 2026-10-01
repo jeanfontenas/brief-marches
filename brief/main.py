@@ -191,6 +191,10 @@ def run(args) -> int:
             status = "partial"
     if cb.get("fed", {}).get("status") == "unavailable":
         notices.append("Fourchette de la Fed indisponible ce matin.")
+    for reg in infl:
+        for v in reg["views"]:
+            if v["status"] != "ok":
+                notices.append(f"Inflation {reg['label']} ({v['label']}) : source indisponible ce matin.")
     if all(ind["status"] != "ok" for ind in inds.values()) and status != "closed":
         notices.append("Aucune nouvelle donnée pour la séance d'hier.")
 
@@ -199,6 +203,8 @@ def run(args) -> int:
     else:
         payload = commentary_payload(today, data_date, inds, curves, slope, cb, infl, events, notices)
         com = commentary.generate(cfg, payload, today, ROOT / "data" / "couts_claude.csv")
+        if not com.get("available") and com.get("reason"):
+            notices.insert(0, "Commentaire indisponible : " + com["reason"] + ".")
 
     essentiel = com.get("essentiel", []) if com.get("available") else []
     if status == "closed":
@@ -239,8 +245,8 @@ def run(args) -> int:
             parts = [f"{ind['label']} {fmt_level(ind, ind['last']['value'])} ({fmt_change(ind, ind['change'])})"
                      for ind in list(inds.values())[:4] if ind["last"]]
             msg = " · ".join(parts)
-        if notices:
-            msg += "\n⚠ " + notices[0]
+        for n in notices[:2]:
+            msg += "\n⚠ " + n
         notif = {"title": title, "message": msg, "tags": ["chart_with_upwards_trend"], "priority": 3}
     Path(args.notification).write_text(json.dumps(notif, ensure_ascii=False), encoding="utf-8")
     gh_output(generated="true", status=status)

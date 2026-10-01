@@ -126,13 +126,17 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
     if not cc.get("actif", True):
         return {"available": False, "error": "commentaire désactivé dans config.yaml"}
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return {"available": False, "error": "clé ANTHROPIC_API_KEY absente"}
+        return {"available": False, "error": "clé ANTHROPIC_API_KEY absente",
+                "reason": "secret ANTHROPIC_API_KEY absent dans GitHub"}
     try:
         import anthropic
     except ImportError:
         return {"available": False, "error": "module anthropic non installé"}
 
-    client = anthropic.Anthropic(timeout=600.0, max_retries=2)
+    headers = {}
+    if os.environ.get("ANTHROPIC_WORKSPACE_ID"):  # utile seulement pour une clé non rattachée à un espace de travail
+        headers["anthropic-workspace-id"] = os.environ["ANTHROPIC_WORKSPACE_ID"]
+    client = anthropic.Anthropic(timeout=600.0, max_retries=2, default_headers=headers or None)
     model = cc.get("modele", "claude-opus-5-5")
     user = ("DONNÉES (chiffres officiels du brief, à recopier tels quels) :\n"
             + json.dumps(payload, ensure_ascii=False, indent=1)
@@ -184,7 +188,23 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
         return out
     except Exception as e:  # noqa: BLE001 - la page doit sortir quoi qu'il arrive
         log.error("Commentaire indisponible : %s: %s", type(e).__name__, e)
-        return {"available": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+        return {"available": False, "error": f"{type(e).__name__}: {str(e)[:200]}", "reason": explain_error(e)}
+
+
+def explain_error(e: Exception) -> str:
+    """Raison courte, en français, affichée sur la page et dans la notification."""
+    name, text = type(e).__name__, str(e).lower()
+    if "usage limit" in text or "spend_limit" in text or "credit balance" in text:
+        return "limite de dépense ou crédit Anthropic épuisé (console Anthropic > Billing)"
+    if name == "AuthenticationError":
+        return "clé Anthropic refusée : expirée ou supprimée ? (à recréer, puis mettre à jour le secret ANTHROPIC_API_KEY)"
+    if name == "PermissionDeniedError":
+        return "clé Anthropic sans autorisation suffisante"
+    if "workspace" in text:
+        return "clé Anthropic non rattachée à un espace de travail (recréer la clé sur « Default »)"
+    if name in ("APIConnectionError", "APITimeoutError", "InternalServerError", "RateLimitError"):
+        return "service Anthropic momentanément indisponible"
+    return "erreur inattendue (voir les journaux GitHub Actions)"
 
 
 def _repair(client, model, text, cfg, cost_log, today) -> dict | None:

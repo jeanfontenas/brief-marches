@@ -63,6 +63,16 @@ Quand une liste est épuisée, la page affiche « date à compléter dans config
 
 Ne colle jamais une clé API dans un message.
 
+## Les clés expirent-elles ?
+| Clé | Durée de vie | À faire |
+|---|---|---|
+| Anthropic | celle choisie à la création (« Never » conseillé) | rien. Si elle expire ou est supprimée, la page et la notification l'indiquent (« clé Anthropic refusée ») : recrée une clé et mets à jour le secret `ANTHROPIC_API_KEY` |
+| FRED | pas d'expiration | rien |
+| Banque de France (Webstat) | pas d'expiration connue | rien. Si elle cesse de marcher, le brief passe en mode sans clé (dernières valeurs seulement) |
+| ntfy | pas de clé, seulement le nom secret du canal | rien |
+
+Pour remplacer une clé : Settings > Secrets and variables > Actions, puis clique sur le crayon à côté du secret, colle la nouvelle valeur et clique sur **Update secret**.
+
 ## Sources des données
 | Donnée | Source | Disponible à 8 h ? |
 |---|---|---|

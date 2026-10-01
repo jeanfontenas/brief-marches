@@ -331,3 +331,12 @@ def test_fed_new_york_fourchette_cible():
     assert out["nyfed:targetRateFrom"][-1] == (date(2026, 9, 30), 3.75)
     assert out["nyfed:targetRateTo"][0] == (date(2026, 9, 15), 3.75)
     assert out["nyfed:targetRateTo"][-1] == (date(2026, 9, 30), 4.0)
+
+
+def test_raison_lisible_si_la_cle_anthropic_echoue():
+    import anthropic
+    import httpx2
+    req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    err = anthropic.AuthenticationError("invalid x-api-key", response=httpx2.Response(401, request=req), body=None)
+    assert "expirée" in commentary.explain_error(err)
+    assert "limite de dépense" in commentary.explain_error(RuntimeError("You have reached your specified API usage limits"))
