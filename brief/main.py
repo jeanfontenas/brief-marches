@@ -139,6 +139,7 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
                 }
     return {
         "date_du_brief": build.fr_date(today), "seance_couverte": build.fr_date(data_date),
+        "dates_iso": {"brief": today.isoformat(), "seance": data_date.isoformat()},
         "indicateurs": rows, "courbes_de_taux": courbes, "banques_centrales": bc, "inflation": inflation,
         "evenements_prevus_aujourd_hui_reperes": events, "avertissements": notices,
     }

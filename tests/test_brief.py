@@ -340,3 +340,11 @@ def test_raison_lisible_si_la_cle_anthropic_echoue():
     err = anthropic.AuthenticationError("invalid x-api-key", response=httpx2.Response(401, request=req), body=None)
     assert "expirée" in commentary.explain_error(err)
     assert "limite de dépense" in commentary.explain_error(RuntimeError("You have reached your specified API usage limits"))
+
+
+def test_exemples_de_requetes_dates_du_jour():
+    p = {"dates_iso": {"seance": "2026-09-30", "brief": "2026-10-01"},
+         "seance_couverte": "mercredi 30 septembre 2026", "date_du_brief": "jeudi 1er octobre 2026"}
+    ex = commentary.search_examples(p)
+    assert "Bourse de Paris clôture 30 septembre 2026" in ex
+    assert "Treasury yields September 30 2026" in ex and "agenda économique 1er octobre 2026" in ex

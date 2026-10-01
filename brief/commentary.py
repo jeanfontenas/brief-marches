@@ -19,7 +19,10 @@ Règles sur les chiffres (impératives) :
 - Un chiffre trouvé dans l'actualité (indicateur publié, prévision, déclaration) n'est permis que si tu cites sa source par un lien.
 - Si une donnée est marquée indisponible ou ancienne, dis-le plutôt que de la deviner.
 
-Recherche web : cherche l'actualité de la séance couverte (ce qui a fait bouger taux, actions, pétrole et change) et l'agenda du jour (publications, réunions, adjudications, discours). Privilégie les sources fiables (banques centrales, instituts statistiques, Reuters, Bloomberg, Les Échos, AFP, CNBC). Fais peu de recherches, bien ciblées.
+Recherche web (indispensable) : explique les mouvements de la séance couverte à partir d'articles publiés ce jour-là ou le lendemain matin, et établis l'agenda du jour.
+- Fais des requêtes courtes avec la date en toutes lettres, en français et en anglais (exemples fournis avec les DONNÉES).
+- Sources acceptées : banques centrales, instituts statistiques, Agence France Trésor, agences et presse économique (Reuters, AP, AFP, Bloomberg, CNBC, MarketWatch, Les Échos, Le Monde, BFM Bourse, Boursorama, Zonebourse, L'Agefi, Le Figaro Bourse, Investir).
+- Cite chaque explication par un lien [texte](url) vers la page trouvée, et liste ces pages dans « sources ». Ne dis pas que tu n'as rien trouvé si des résultats pertinents existent ; si une explication reste incertaine, dis-le pour ce point seulement.
 
 Style : français, ton clair et pédagogique, phrases courtes, format français des nombres (« 3,42 % », « +5 bp », virgule décimale). Écris « bp » pour les points de base. Pas de recommandation d'investissement.
 
@@ -108,6 +111,39 @@ def _text_and_citations(content) -> tuple[str, list[dict]]:
     return text, cites
 
 
+MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+             "October", "November", "December"]
+
+
+def search_examples(payload: dict) -> list[str]:
+    iso = payload.get("dates_iso", {})
+    try:
+        seance, brief = date.fromisoformat(iso["seance"]), date.fromisoformat(iso["brief"])
+    except (KeyError, ValueError):
+        return []
+    fr = payload.get("seance_couverte", "").split(" ", 1)[-1]          # « 30 septembre 2026 »
+    fr_brief = payload.get("date_du_brief", "").split(" ", 1)[-1]
+    en = f"{MONTHS_EN[seance.month - 1]} {seance.day} {seance.year}"
+    return [f"Bourse de Paris clôture {fr}", f"OAT Bund spread {fr}", f"Treasury yields {en}",
+            f"stocks Wall Street close {en}", f"oil prices {en}", f"agenda économique {fr_brief}"]
+
+
+def log_searches(content) -> None:
+    """Journalise les requêtes de recherche et le nombre de résultats (diagnostic dans GitHub Actions)."""
+    for b in content:
+        t = getattr(b, "type", "")
+        if t == "server_tool_use":
+            inp = getattr(b, "input", {}) or {}
+            q = inp.get("query") if isinstance(inp, dict) else None
+            log.info("Recherche web : %s", q or str(inp)[:160])
+        elif t == "web_search_tool_result":
+            c = getattr(b, "content", None)
+            if isinstance(c, list):
+                log.info("  → %d résultat(s) : %s", len(c), ", ".join(getattr(r, "url", "")[:70] for r in c[:4]))
+            else:
+                log.warning("  → erreur de recherche : %s", getattr(c, "error_code", c))
+
+
 def estimate_cost(usage, model: str, cfg: dict) -> float:
     prices = cfg["commentaire"].get("prix_usd", {})
     p = prices.get(model) or prices.get(cfg["commentaire"]["modele"]) or {}
@@ -140,11 +176,17 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
     model = cc.get("modele", "claude-opus-5-5")
     user = ("DONNÉES (chiffres officiels du brief, à recopier tels quels) :\n"
             + json.dumps(payload, ensure_ascii=False, indent=1)
+            + "\n\nExemples de requêtes pour ce brief : " + "; ".join(f"« {q} »" for q in search_examples(payload))
             + "\n\nRédige le brief de ce matin au format JSON demandé.")
     messages: list = [{"role": "user", "content": user}]
     tools = [{"type": "web_search_20260318", "name": "web_search",
-              "max_uses": int(cc.get("recherches_web_max", 4)), "response_inclusion": "excluded",
+              "max_uses": int(cc.get("recherches_web_max", 5)),
               "user_location": {"type": "approximate", "city": "Paris", "country": "FR", "timezone": "Europe/Paris"}}]
+    if not cc.get("filtrage_dynamique", False):
+        # Recherche « directe » : les résultats et les citations reviennent tels quels (sources fiables dans la page).
+        tools[0]["allowed_callers"] = ["direct"]
+    else:
+        tools[0]["response_inclusion"] = "excluded"
     if cc.get("domaines_exclus"):
         tools[0]["blocked_domains"] = list(cc["domaines_exclus"])
     params = dict(model=model, max_tokens=int(cc.get("max_tokens", 16000)), system=SYSTEM, tools=tools,
@@ -173,6 +215,7 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
             break
         if resp.stop_reason == "refusal":
             return {"available": False, "error": "le modèle a décliné la demande"}
+        log_searches(resp.content)
         text, cites = _text_and_citations(resp.content)
         obj = extract_json(text)
         if obj is None:

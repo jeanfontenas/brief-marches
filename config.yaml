@@ -23,7 +23,8 @@ commentaire:
   actif: true
   modele: "claude-opus-5-5"       # modèle recommandé par la documentation Anthropic
   effort: "medium"                # low | medium | high : plus haut = plus fouillé et plus cher
-  recherches_web_max: 4           # nombre maximal de recherches web par brief
+  recherches_web_max: 5           # nombre maximal de recherches web par brief (1 recherche = 0,01 $)
+  filtrage_dynamique: false       # false = résultats et liens bruts (sources plus fiables) ; true = tri par code (expérimental)
   # Sites exclus des recherches de Claude. Le FT interdit expressément l'usage de son
   # contenu à des fins d'intelligence artificielle (voir https://www.ft.com/robots.txt).
   domaines_exclus: ["ft.com"]
