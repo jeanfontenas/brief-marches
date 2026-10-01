@@ -15,8 +15,8 @@ CHARTJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.m
 
 HEAD_EXTRA = """<meta name="description" content="Brief quotidien des marchés de taux, actions, pétrole et change.">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0e13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fff1e5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1a19" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -58,13 +58,13 @@ ARCHIVE_INDEX = """<!doctype html>
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <title>Archives · {title}</title>
 <style>
-:root {{ --bg:#f3f5f8; --surface:#fff; --ink:#111826; --ink-2:#465162; --line:#dde2e9; --accent:#1f56a4; }}
-@media (prefers-color-scheme: dark) {{ :root {{ --bg:#0b0e13; --surface:#141920; --ink:#edf1f6; --ink-2:#b4bdca; --line:#262e39; --accent:#7eb0f2; }} }}
+:root {{ --bg:#fff1e5; --surface:#fff7ef; --ink:#33302e; --ink-2:#5c5550; --line:#e3d1c1; --accent:#0f5499; }}
+@media (prefers-color-scheme: dark) {{ :root {{ --bg:#1c1a19; --surface:#262321; --ink:#fff1e5; --ink-2:#d4c8bd; --line:#3a3532; --accent:#6ea6e8; }} }}
 body {{ margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; line-height:1.45; }}
 .wrap {{ max-width:720px; margin:0 auto; padding-inline:16px; padding-block:24px 48px; }}
-h1 {{ font-family:Georgia,"Times New Roman",serif; font-weight:500; font-size:1.875rem; margin:8px 0 16px; }}
+h1 {{ font-family:Georgia,"Times New Roman",serif; font-weight:500; font-size:1.875rem; margin:8px 0 16px; border-top:2px solid var(--ink); padding-top:10px; }}
 a {{ color:var(--accent); text-decoration:none; }}
-ul {{ list-style:none; margin:0; padding:0; background:var(--surface); border:1px solid var(--line); border-radius:14px; }}
+ul {{ list-style:none; margin:0; padding:0; background:var(--surface); border:1px solid var(--line); border-radius:4px; }}
 li {{ border-top:1px solid var(--line); }} li:first-child {{ border-top:0; }}
 li a {{ display:block; padding:12px 16px; }}
 li span {{ display:block; color:var(--ink-2); font-size:.875rem; margin-top:2px; }}

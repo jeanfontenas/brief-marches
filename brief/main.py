@@ -125,7 +125,7 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
         if k == "ecb" and "value" in b:
             item["taux"] = build.fr_num(b["value"], 2) + " %"
         if b.get("last_change"):
-            item["derniere_decision"] = f"{build.fr_signed(b['last_change']['bp'], 0)} bp le {b['last_change']['date']}"
+            item["dernier_changement"] = f"{build.fr_signed(b['last_change']['bp'], 0)}\u00a0bp, en vigueur le {b['last_change']['date']}"
         if b.get("next_meeting"):
             item["prochaine_reunion"] = b["next_meeting"]["label"]
         bc[b.get("label", k)] = item
@@ -190,7 +190,7 @@ def run(args) -> int:
         if status == "ok":
             status = "partial"
     if cb.get("fed", {}).get("status") == "unavailable":
-        notices.append("Taux de la Fed indisponibles (source FRED).")
+        notices.append("Fourchette de la Fed indisponible ce matin.")
     if all(ind["status"] != "ok" for ind in inds.values()) and status != "closed":
         notices.append("Aucune nouvelle donnée pour la séance d'hier.")
 
@@ -218,6 +218,7 @@ def run(args) -> int:
         "indicators": inds, "curves": curves, "slope": slope, "central_banks": cb, "inflation": infl,
         "commentary": com,
         "footer_sources": [{"what": s["quoi"], "name": s["nom"], "url": s.get("url", "")} for s in cfg.get("sources_pied_de_page", [])],
+        "links": [{"name": l["nom"], "url": l["url"]} for l in cfg.get("liens_utiles", []) if l.get("url")],
     }
     site = Path(args.site)
     write_site(data, site, today, cfg["general"].get("titre_court", "Brief"))

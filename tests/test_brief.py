@@ -321,3 +321,13 @@ def test_commentaire_avec_reponse_simulee_du_sdk(monkeypatch, tmp_path):
     assert calls[1]["messages"][1]["role"] == "assistant"          # reprise après pause_turn
     assert out["cost_usd"] == pytest.approx(2 * (20000 * 4 / 1e6 + 3000 * 20 / 1e6 + 0.02))
     assert len((tmp_path / "c.csv").read_text().splitlines()) == 3   # en-tête + 2 appels
+
+
+def test_fed_new_york_fourchette_cible():
+    http = FakeHttp({"newyorkfed.org": (FIX / "nyfed.json").read_text()})
+    specs = [{"fournisseur": "nyfed", "champ": "targetRateFrom"}, {"fournisseur": "nyfed", "champ": "targetRateTo"}]
+    since = {sources.spec_key(s): date(2026, 9, 1) for s in specs}
+    out = sources.fetch_nyfed(http, specs, since, date(2026, 10, 1))
+    assert out["nyfed:targetRateFrom"][-1] == (date(2026, 9, 30), 3.75)
+    assert out["nyfed:targetRateTo"][0] == (date(2026, 9, 15), 3.75)
+    assert out["nyfed:targetRateTo"][-1] == (date(2026, 9, 30), 4.0)

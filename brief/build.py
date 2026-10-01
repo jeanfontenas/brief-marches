@@ -87,7 +87,8 @@ def collect_specs(cfg: dict) -> list[dict]:
     for c in cfg["courbes"]["pays"].values():
         specs.extend(c["points"].values())
     cb = cfg["banques_centrales"]
-    specs += [cb["fed"]["bas"], cb["fed"]["haut"], cb["bce"]["taux"]]
+    for part in (cb["fed"]["bas"], cb["fed"]["haut"], cb["bce"]["taux"]):
+        specs.extend(_as_list(part))
     for reg in cfg["inflation"]:
         for m in reg["mesures"]:
             specs += [m["totale"], m["sous_jacente"]]
@@ -233,6 +234,23 @@ def _minus_months(d: date, n: int) -> date:
 
 
 # ---------------------------------------------------------------- Banques centrales
+def _as_list(x) -> list[dict]:
+    return x if isinstance(x, list) else [x]
+
+
+def _best(specs, f: Fetched, data_date: date) -> tuple[Series, bool]:
+    """Première source téléchargée avec succès ce matin, sinon la plus récente en mémoire."""
+    cands = []
+    for i, spec in enumerate(_as_list(specs)):
+        k = spec_key(spec)
+        s = [(d, v) for d, v in f.series.get(k, []) if d <= data_date]
+        if s:
+            cands.append((k in f.ok, s[-1][0], -i, s))
+    if not cands:
+        return [], False
+    ok, _, _, s = max(cands, key=lambda c: (c[0], c[1], c[2]))
+    return s, ok
+
 def _changes(s: Series) -> Series:
     """Ne garde que les points où le taux change (plus le premier et le dernier)."""
     out: Series = []
@@ -264,8 +282,8 @@ def build_central_banks(cfg: dict, f: Fetched, data_date: date, today: date) -> 
     years_ago = data_date - timedelta(days=365 * 5 + 7)
     out: dict = {"help": cb.get("aide", "")}
     fed, ecb = cb["fed"], cb["bce"]
-    lo = [(d, v) for d, v in f.series.get(spec_key(fed["bas"]), []) if d <= data_date]
-    hi = [(d, v) for d, v in f.series.get(spec_key(fed["haut"]), []) if d <= data_date]
+    lo, lo_ok = _best(fed["bas"], f, data_date)
+    hi, _ = _best(fed["haut"], f, data_date)
     if lo and hi:
         his = dict(hi)
         ch = _changes([(d, v) for d, v in lo if d in his])
@@ -280,18 +298,18 @@ def build_central_banks(cfg: dict, f: Fetched, data_date: date, today: date) -> 
             if before:
                 pts.insert(0, (years_ago, before[-1][1]))
         out["fed"] = {
-            "label": fed["nom"], "name": fed["libelle"], "lower": lo[-1][1], "upper": his[lo[-1][0]],
+            "label": fed["nom"], "name": fed["libelle"], "lower": lo[-1][1], "upper": his.get(lo[-1][0], hi[-1][1]),
             "last_change": ({"date": last_change[0].isoformat(), "bp": round((last_change[1] - prev_val) * 100)}
                             if last_change else None),
             "next_meeting": _next_meeting(fed["reunions"], today),
             "series": {"t": [d.isoformat() for d, _ in pts], "lower": [v for _, v in pts],
                        "upper": [his.get(d, v + 0.25) for d, v in pts]},
-            "status": "ok" if spec_key(fed["bas"]) in f.ok else "unavailable",
+            "status": "ok" if lo_ok else "unavailable",
         }
     else:
         out["fed"] = {"label": fed["nom"], "name": fed["libelle"], "status": "unavailable",
                       "next_meeting": _next_meeting(fed["reunions"], today)}
-    e = [(d, v) for d, v in f.series.get(spec_key(ecb["taux"]), []) if d <= data_date]
+    e, e_ok = _best(ecb["taux"], f, data_date)
     if e:
         ch = _changes(e)
         last_change = next((i for i in range(len(ch) - 1, 0, -1) if abs(ch[i][1] - ch[i - 1][1]) > 1e-9), None)
@@ -305,7 +323,7 @@ def build_central_banks(cfg: dict, f: Fetched, data_date: date, today: date) -> 
                              "bp": round((ch[last_change][1] - ch[last_change - 1][1]) * 100)} if last_change else None),
             "next_meeting": _next_meeting(ecb["reunions"], today),
             "series": {"t": [d.isoformat() for d, _ in pts], "v": [v for _, v in pts]},
-            "status": "ok" if spec_key(ecb["taux"]) in f.ok else "unavailable",
+            "status": "ok" if e_ok else "unavailable",
         }
     else:
         out["ecb"] = {"label": ecb["nom"], "name": ecb["libelle"], "status": "unavailable",

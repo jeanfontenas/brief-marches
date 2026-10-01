@@ -19,7 +19,7 @@ Règles sur les chiffres (impératives) :
 - Un chiffre trouvé dans l'actualité (indicateur publié, prévision, déclaration) n'est permis que si tu cites sa source par un lien.
 - Si une donnée est marquée indisponible ou ancienne, dis-le plutôt que de la deviner.
 
-Recherche web : cherche l'actualité de la séance couverte (ce qui a fait bouger taux, actions, pétrole et change) et l'agenda du jour (publications, réunions, adjudications, discours). Privilégie les sources fiables (banques centrales, instituts statistiques, Reuters, Bloomberg, Les Échos, Financial Times, AFP, CNBC). Fais peu de recherches, bien ciblées.
+Recherche web : cherche l'actualité de la séance couverte (ce qui a fait bouger taux, actions, pétrole et change) et l'agenda du jour (publications, réunions, adjudications, discours). Privilégie les sources fiables (banques centrales, instituts statistiques, Reuters, Bloomberg, Les Échos, AFP, CNBC). Fais peu de recherches, bien ciblées.
 
 Style : français, ton clair et pédagogique, phrases courtes, format français des nombres (« 3,42 % », « +5 bp », virgule décimale). Écris « bp » pour les points de base. Pas de recommandation d'investissement.
 
@@ -141,6 +141,8 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
     tools = [{"type": "web_search_20260318", "name": "web_search",
               "max_uses": int(cc.get("recherches_web_max", 4)), "response_inclusion": "excluded",
               "user_location": {"type": "approximate", "city": "Paris", "country": "FR", "timezone": "Europe/Paris"}}]
+    if cc.get("domaines_exclus"):
+        tools[0]["blocked_domains"] = list(cc["domaines_exclus"])
     params = dict(model=model, max_tokens=int(cc.get("max_tokens", 16000)), system=SYSTEM, tools=tools,
                   output_config={"effort": cc.get("effort", "medium")})
     total_cost, use_fallbacks = 0.0, True

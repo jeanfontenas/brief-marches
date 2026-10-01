@@ -24,6 +24,9 @@ commentaire:
   modele: "claude-opus-5-5"       # modèle recommandé par la documentation Anthropic
   effort: "medium"                # low | medium | high : plus haut = plus fouillé et plus cher
   recherches_web_max: 4           # nombre maximal de recherches web par brief
+  # Sites exclus des recherches de Claude. Le FT interdit expressément l'usage de son
+  # contenu à des fins d'intelligence artificielle (voir https://www.ft.com/robots.txt).
+  domaines_exclus: ["ft.com"]
   max_tokens: 16000
   # Prix en dollars, pour estimer le coût de chaque brief dans les journaux.
   # À mettre à jour si les tarifs changent (https://claude.com/pricing).
@@ -55,7 +58,7 @@ groupes:
 #   sources              : liste de sources, la première qui marche est utilisée
 #   aide                 : texte du bouton « ? »
 # Fournisseurs possibles : yahoo (symbole), treasury (colonne), treasury_reel (colonne),
-#   bundesbank (maturite), bdf (serie), bce (cle), fred (serie)
+#   bundesbank (maturite), bdf (serie), bce (cle), fred (serie), nyfed (champ)
 indicateurs:
   oat10:
     nom: "OAT 10 ans"
@@ -265,8 +268,12 @@ banques_centrales:
   fed:
     nom: "Fed"
     libelle: "Fourchette des fed funds"
-    bas: {fournisseur: fred, serie: "DFEDTARL"}
-    haut: {fournisseur: fred, serie: "DFEDTARU"}
+    bas:   # Fed de New York (sans clé), puis FRED en secours
+      - {fournisseur: nyfed, champ: "targetRateFrom"}
+      - {fournisseur: fred, serie: "DFEDTARL"}
+    haut:
+      - {fournisseur: nyfed, champ: "targetRateTo"}
+      - {fournisseur: fred, serie: "DFEDTARU"}
     reunions: ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16",
                "2026-10-28", "2026-12-09",
                "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15",
@@ -336,6 +343,16 @@ agenda:
   adjudications_aft: true   # règle indicative : OAT long terme 1er jeudi, moyen terme et OATi 3e jeudi, BTF chaque lundi
 
 # ---------------------------------------------------------------------
+#  Liens « Pour aller plus loin » en bas de page (simples liens, aucun contenu repris)
+# ---------------------------------------------------------------------
+liens_utiles:
+  - {nom: "FT : marchés", url: "https://www.ft.com/markets"}
+  - {nom: "FT : obligations", url: "https://www.ft.com/bonds"}
+  - {nom: "FT : banques centrales", url: "https://www.ft.com/central-banks"}
+  - {nom: "FT : Unhedged", url: "https://www.ft.com/unhedged"}
+  - {nom: "FT : taux souverains (données)", url: "https://markets.ft.com/data/bonds"}
+
+# ---------------------------------------------------------------------
 #  Pied de page : sources affichées
 # ---------------------------------------------------------------------
 sources_pied_de_page:
@@ -344,6 +361,7 @@ sources_pied_de_page:
   - {quoi: "Taux américains, point mort", nom: "US Treasury", url: "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics"}
   - {quoi: "Actions, pétrole, euro/dollar", nom: "Yahoo Finance", url: "https://finance.yahoo.com"}
   - {quoi: "Taux de dépôt BCE, IPCH", nom: "BCE (Data Portal)", url: "https://data.ecb.europa.eu"}
-  - {quoi: "Fed, CPI, PCE", nom: "FRED (Fed de Saint-Louis)", url: "https://fred.stlouisfed.org"}
+  - {quoi: "Fourchette de la Fed", nom: "Fed de New York", url: "https://www.newyorkfed.org/markets/reference-rates/effr"}
+  - {quoi: "CPI, PCE", nom: "FRED (Fed de Saint-Louis)", url: "https://fred.stlouisfed.org"}
   - {quoi: "Calendrier d'inflation zone euro", nom: "Eurostat", url: "https://ec.europa.eu/eurostat/news/release-calendar"}
   - {quoi: "Commentaire", nom: "Claude (Anthropic), avec recherche web", url: "https://www.anthropic.com"}

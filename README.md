@@ -71,7 +71,10 @@ Ne colle jamais une clé API dans un message.
 | Taux américains, point mort 10 ans | US Treasury (courbes nominale et réelle) | oui, clôture de la veille |
 | CAC 40, S&P 500, Brent, WTI, Dubai, euro/dollar | Yahoo Finance (usage personnel, non officiel) | oui, clôture de la veille |
 | Taux de dépôt BCE, IPCH zone euro et France | BCE (Data Portal) | oui |
-| Fed, CPI, PCE | FRED (Fed de Saint-Louis) | oui (données mensuelles) |
+| Fourchette cible de la Fed | Fed de New York (sans clé), FRED en secours | oui |
+| CPI, PCE | FRED (Fed de Saint-Louis) | oui (données mensuelles) |
+
+Financial Times : le FT interdit l'usage de son contenu à des fins d'intelligence artificielle (https://www.ft.com/robots.txt). Le site ft.com est donc exclu des recherches de Claude (`domaines_exclus` dans `config.yaml`), et la page propose seulement des liens « Pour aller plus loin » vers le FT, à lire avec ton abonnement.
 
 Limites connues : pas de taux quotidien gratuit pour les BTF français à 3 et 6 mois, ni pour l'Allemagne à 3 mois. Les taux français et allemands sont des valeurs officielles calculées en cours de journée, pas des cours de clôture.
 
@@ -98,6 +101,6 @@ Limites connues : pas de taux quotidien gratuit pour les BTF français à 3 et 6
 | Nom | Contenu | Obligatoire |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | clé de la console Anthropic | pour le commentaire |
-| `FRED_API_KEY` | clé FRED | pour la Fed, le CPI et le PCE |
+| `FRED_API_KEY` | clé FRED | pour le CPI et le PCE (et en secours pour la Fed) |
 | `BDF_API_KEY` | clé Webstat de la Banque de France | pour l'historique des taux français |
 | `NTFY_TOPIC` | nom secret du canal ntfy | pour les notifications |

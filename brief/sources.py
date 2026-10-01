@@ -33,6 +33,7 @@ def spec_key(spec: dict) -> str:
         "bdf": spec.get("serie"),
         "bce": spec.get("cle"),
         "fred": spec.get("serie"),
+        "nyfed": spec.get("champ"),
     }.get(f)
     if not ident:
         raise ValueError(f"Source mal décrite dans config.yaml : {spec}")
@@ -245,6 +246,22 @@ def fetch_fred(http: Http, specs: list[dict], since: dict[str, date], today: dat
     return out
 
 
+# ------------------------------------------------------------- Fed de New York (fourchette cible, sans clé)
+def fetch_nyfed(http: Http, specs: list[dict], since: dict[str, date], today: date) -> dict[str, Series]:
+    start = min(since[spec_key(s)] for s in specs)
+    r = http.get("https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json",
+                 params={"startDate": start.isoformat(), "endDate": today.isoformat()})
+    rows = r.json().get("refRates", [])
+    out: dict[str, Series] = {}
+    for spec in specs:
+        field = spec["champ"]  # targetRateFrom (bas) ou targetRateTo (haut)
+        pts = sorted((date.fromisoformat(x["effectiveDate"]), float(x[field])) for x in rows
+                     if x.get(field) is not None and date.fromisoformat(x["effectiveDate"]) < today)
+        if pts:
+            out[spec_key(spec)] = pts
+    return out
+
+
 # ------------------------------------------------------------- Répartiteur
 def fetch_all(http: Http, specs: list[dict], since: dict[str, date], today: date) -> tuple[dict[str, Series], dict[str, str]]:
     """Télécharge toutes les specs, regroupées par fournisseur. Renvoie (données, erreurs)."""
@@ -265,6 +282,7 @@ def fetch_all(http: Http, specs: list[dict], since: dict[str, date], today: date
         "bdf": lambda sp: fetch_bdf(http, sp, since, today),
         "bce": lambda sp: fetch_ecb(http, sp, since, today),
         "fred": lambda sp: fetch_fred(http, sp, since, today),
+        "nyfed": lambda sp: fetch_nyfed(http, sp, since, today),
     }
     for provider, sp in by_provider.items():
         if provider not in calls:
