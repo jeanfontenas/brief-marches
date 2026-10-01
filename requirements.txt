@@ -1,0 +1,4 @@
+anthropic==1.11.0
+holidays==0.105
+PyYAML==6.0.3
+requests==2.34.2

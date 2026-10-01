@@ -1,0 +1,349 @@
+# =====================================================================
+#  BRIEF MARCHÉS : FICHIER DE CONFIGURATION
+#  Tu peux modifier ce fichier sans toucher au code (voir README.md).
+#  Règles de syntaxe : garder les espaces en début de ligne (indentation),
+#  mettre les textes entre guillemets, une liste = des lignes qui
+#  commencent par « - ».
+# =====================================================================
+
+general:
+  titre: "Brief marchés"
+  titre_court: "Brief"            # nom affiché sous l'icône de l'iPhone
+  heure_cible: "08:00"            # heure de Paris à laquelle la page doit être prête
+  avance_minutes: 50              # le calcul démarre ~50 min avant l'heure cible
+  en_pause: false                 # true = plus de brief ni de notification
+  notifier_jours_fermes: true     # notification courte quand les marchés étaient fermés
+  periode_defaut: "3M"            # période affichée par défaut sur les mini-graphiques
+  historique_ans: 5               # profondeur d'historique téléchargée
+
+# ---------------------------------------------------------------------
+#  Commentaire rédigé par Claude
+# ---------------------------------------------------------------------
+commentaire:
+  actif: true
+  modele: "claude-opus-5-5"       # modèle recommandé par la documentation Anthropic
+  effort: "medium"                # low | medium | high : plus haut = plus fouillé et plus cher
+  recherches_web_max: 4           # nombre maximal de recherches web par brief
+  max_tokens: 16000
+  # Prix en dollars, pour estimer le coût de chaque brief dans les journaux.
+  # À mettre à jour si les tarifs changent (https://claude.com/pricing).
+  prix_usd:
+    claude-opus-5-5:   {entree_par_million: 4.0, sortie_par_million: 20.0, cache_lecture_par_million: 0.20}
+    claude-sonnet-5-5: {entree_par_million: 2.0, sortie_par_million: 10.0, cache_lecture_par_million: 0.20}
+    recherche_web: 0.01            # 10 $ pour 1 000 recherches
+
+# ---------------------------------------------------------------------
+#  Cartes indicateurs : ordre et groupes
+#  Pour ajouter un indicateur : le définir plus bas dans « indicateurs »,
+#  puis ajouter son identifiant dans un groupe.
+# ---------------------------------------------------------------------
+groupes:
+  - titre: "Taux souverains à 10 ans"
+    indicateurs: [oat10, bund10, ust10, spread_oat_bund]
+  - titre: "Actions"
+    indicateurs: [cac40, sp500]
+  - titre: "Pétrole"
+    indicateurs: [brent, wti, dubai]
+  - titre: "Change et inflation anticipée"
+    indicateurs: [eurusd, pointmort_us10]
+
+# Champs d'un indicateur :
+#   nom, sous_titre      : textes affichés sur la carte
+#   unite                : "%" (taux), "bp" (écart en points de base), "$" (prix), "" (indice, change)
+#   decimales            : nombre de chiffres après la virgule
+#   variation            : "bp" (taux) ou "pct" (actions, pétrole, change)
+#   sources              : liste de sources, la première qui marche est utilisée
+#   aide                 : texte du bouton « ? »
+# Fournisseurs possibles : yahoo (symbole), treasury (colonne), treasury_reel (colonne),
+#   bundesbank (maturite), bdf (serie), bce (cle), fred (serie)
+indicateurs:
+  oat10:
+    nom: "OAT 10 ans"
+    sous_titre: "France"
+    unite: "%"
+    decimales: 2
+    variation: "bp"
+    sources:
+      - {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC10.HSTA"}
+    aide: "Rendement de l'emprunt d'État français à 10 ans (TEC 10, Banque de France). Il monte quand le prix des OAT baisse. C'est la référence du coût d'emprunt de l'État, qui se diffuse aux crédits immobiliers. Valeur officielle calculée en cours de journée, pas un cours de clôture."
+
+  bund10:
+    nom: "Bund 10 ans"
+    sous_titre: "Allemagne"
+    unite: "%"
+    decimales: 2
+    variation: "bp"
+    sources:
+      - {fournisseur: bundesbank, maturite: "R10XX"}
+    aide: "Rendement de l'emprunt fédéral allemand à 10 ans, l'actif sans risque de référence de la zone euro (estimation quotidienne de la Bundesbank). Il reflète surtout les anticipations sur la BCE, l'inflation attendue et la prime de terme."
+
+  ust10:
+    nom: "Treasury 10 ans"
+    sous_titre: "États-Unis"
+    unite: "%"
+    decimales: 2
+    variation: "bp"
+    sources:
+      - {fournisseur: treasury, colonne: "10 Yr"}
+      - {fournisseur: fred, serie: "DGS10"}
+    aide: "Rendement du bon du Trésor américain à 10 ans, la référence mondiale des taux longs (clôture publiée par le Trésor américain). Ses mouvements se transmettent souvent aux taux européens."
+
+  spread_oat_bund:
+    nom: "Spread OAT − Bund"
+    sous_titre: "10 ans"
+    unite: "bp"
+    decimales: 0
+    variation: "bp"
+    calcul: {difference: [oat10, bund10], facteur: 100}
+    aide: "Écart entre les taux à 10 ans français et allemand, en points de base (bp). C'est la prime exigée pour détenir de la dette française plutôt qu'allemande (risque budgétaire, politique, liquidité). S'il s'élargit, la France paie relativement plus cher pour emprunter."
+
+  cac40:
+    nom: "CAC 40"
+    sous_titre: "Paris"
+    unite: ""
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "^FCHI"}
+    aide: "Indice des 40 principales capitalisations de la Bourse de Paris, à la clôture (hors dividendes). Des taux qui montent pèsent souvent sur les actions : ils réduisent la valeur actuelle des profits futurs et rendent les obligations plus attractives."
+
+  sp500:
+    nom: "S&P 500"
+    sous_titre: "New York"
+    unite: ""
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "^GSPC"}
+      - {fournisseur: fred, serie: "SP500"}
+    aide: "Indice des 500 grandes entreprises américaines, pondéré par la capitalisation. Dominé par la technologie, il est sensible aux taux longs. Il clôture à 22 h, heure de Paris."
+
+  brent:
+    nom: "Brent"
+    sous_titre: "$ / baril"
+    unite: "$"
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "BZ=F"}
+    aide: "Prix du baril de pétrole de la mer du Nord (contrat à terme le plus proche), en dollars. C'est la référence pour l'Europe. Une hausse durable pèse sur l'inflation, puis sur les points morts d'inflation et les taux."
+
+  wti:
+    nom: "WTI"
+    sous_titre: "$ / baril"
+    unite: "$"
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "CL=F"}
+    aide: "Prix du baril de pétrole américain (West Texas Intermediate, contrat à terme le plus proche), en dollars. Il suit en général le Brent, avec un écart lié au transport et aux stocks américains."
+
+  dubai:
+    nom: "Dubai"
+    sous_titre: "$ / baril"
+    unite: "$"
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "DCB=F"}
+    aide: "Prix du brut de Dubaï (contrat à terme financier réglé sur l'évaluation Platts), en dollars par baril. C'est la référence du pétrole du Moyen-Orient vendu vers l'Asie. Son écart avec le Brent renseigne sur l'équilibre entre l'offre du Golfe et la demande asiatique."
+
+  eurusd:
+    nom: "Euro / dollar"
+    sous_titre: "EUR/USD"
+    unite: ""
+    decimales: 4
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "EURUSD=X"}
+      - {fournisseur: bce, cle: "EXR/D.USD.EUR.SP00.A"}
+    aide: "Nombre de dollars pour un euro : une hausse signifie que l'euro s'apprécie. Il réagit à l'écart de taux entre la zone euro et les États-Unis. Un euro fort rend le pétrole moins cher en euros."
+
+  pointmort_us10:
+    nom: "Point mort 10 ans"
+    sous_titre: "États-Unis"
+    unite: "%"
+    decimales: 2
+    variation: "bp"
+    calcul: {difference: [ust10, tips10], facteur: 1}
+    aide: "Écart entre le rendement du Treasury 10 ans classique et celui du Treasury indexé sur l'inflation (TIPS). Il donne l'inflation moyenne anticipée par le marché sur 10 ans, à une prime de risque près. La Fed le surveille pour vérifier que les anticipations restent ancrées autour de 2 %."
+
+  # Série utilisée seulement pour le calcul du point mort (pas de carte).
+  tips10:
+    nom: "TIPS 10 ans"
+    unite: "%"
+    decimales: 2
+    variation: "bp"
+    sources:
+      - {fournisseur: treasury_reel, colonne: "10 YR"}
+      - {fournisseur: fred, serie: "DFII10"}
+
+  # --- Exemples prêts à l'emploi : ajoute l'identifiant dans un groupe ci-dessus ---
+  eurostoxx50:
+    nom: "Euro Stoxx 50"
+    sous_titre: "Zone euro"
+    unite: ""
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "^STOXX50E"}
+    aide: "Indice des 50 plus grandes capitalisations de la zone euro."
+  dax:
+    nom: "DAX"
+    sous_titre: "Francfort"
+    unite: ""
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "^GDAXI"}
+    aide: "Indice des 40 principales valeurs allemandes. Attention : c'est un indice de rentabilité (dividendes réinvestis), contrairement au CAC 40."
+  nasdaq:
+    nom: "Nasdaq Composite"
+    sous_titre: "New York"
+    unite: ""
+    decimales: 2
+    variation: "pct"
+    sources:
+      - {fournisseur: yahoo, symbole: "^IXIC"}
+    aide: "Indice des valeurs cotées au Nasdaq, très exposé à la technologie et donc aux taux longs."
+
+# ---------------------------------------------------------------------
+#  Courbes de taux (maturités affichées et source de chaque point)
+# ---------------------------------------------------------------------
+courbes:
+  maturites: ["3M", "6M", "1A", "2A", "5A", "10A", "20A", "30A"]
+  aide: "Chaque point est le rendement d'un emprunt d'État pour une durée donnée, de 3 mois à 30 ans. Comparer la courbe du jour à celles d'il y a une semaine, un mois et un an montre si ce sont les taux courts (anticipations de banque centrale) ou les taux longs (inflation attendue, prime de terme) qui ont bougé. L'axe horizontal n'est pas proportionnel aux durées. France : pas de taux quotidien gratuit pour les BTF à 3 et 6 mois. Allemagne : pas de point à 3 mois."
+  pays:
+    fr:
+      nom: "France"
+      instrument: "OAT (TEC)"
+      source: "Banque de France"
+      points:
+        "1A":  {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC1.HSTA"}
+        "2A":  {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC2.HSTA"}
+        "5A":  {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC5.HSTA"}
+        "10A": {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC10.HSTA"}
+        "20A": {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC20.HSTA"}
+        "30A": {fournisseur: bdf, serie: "FM.D.FR.EUR.FR2.BB.FRMOYTEC30.HSTA"}
+    de:
+      nom: "Allemagne"
+      instrument: "Bund"
+      source: "Bundesbank"
+      points:
+        "6M":  {fournisseur: bundesbank, maturite: "R005X"}
+        "1A":  {fournisseur: bundesbank, maturite: "R01XX"}
+        "2A":  {fournisseur: bundesbank, maturite: "R02XX"}
+        "5A":  {fournisseur: bundesbank, maturite: "R05XX"}
+        "10A": {fournisseur: bundesbank, maturite: "R10XX"}
+        "20A": {fournisseur: bundesbank, maturite: "R20XX"}
+        "30A": {fournisseur: bundesbank, maturite: "R30XX"}
+    us:
+      nom: "États-Unis"
+      instrument: "Treasuries"
+      source: "US Treasury"
+      points:
+        "3M":  {fournisseur: treasury, colonne: "3 Mo"}
+        "6M":  {fournisseur: treasury, colonne: "6 Mo"}
+        "1A":  {fournisseur: treasury, colonne: "1 Yr"}
+        "2A":  {fournisseur: treasury, colonne: "2 Yr"}
+        "5A":  {fournisseur: treasury, colonne: "5 Yr"}
+        "10A": {fournisseur: treasury, colonne: "10 Yr"}
+        "20A": {fournisseur: treasury, colonne: "20 Yr"}
+        "30A": {fournisseur: treasury, colonne: "30 Yr"}
+  pente_aide: "Différence entre le taux à 10 ans et le taux à 2 ans, en points de base (bp). Sous zéro, la courbe est inversée : le marché anticipe des baisses de taux, souvent associées à un ralentissement. Une pente qui remonte peut venir d'une baisse des taux courts (bull steepening) ou d'une hausse des taux longs (bear steepening)."
+
+# ---------------------------------------------------------------------
+#  Banques centrales
+#  ⚠ À METTRE À JOUR CHAQUE ANNÉE : dates des réunions (dernier jour de
+#  chaque réunion de politique monétaire). Sources officielles :
+#   Fed : https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+#   BCE : https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.fr.html
+#  Vérifiées le 1er octobre 2026.
+# ---------------------------------------------------------------------
+banques_centrales:
+  aide: "La Fed fixe une fourchette cible pour le taux des fed funds (prêts interbancaires au jour le jour). La BCE pilote les taux courts par son taux de dépôt, qui rémunère les liquidités excédentaires des banques. La date de la prochaine réunion indique quand une nouvelle décision peut tomber."
+  fed:
+    nom: "Fed"
+    libelle: "Fourchette des fed funds"
+    bas: {fournisseur: fred, serie: "DFEDTARL"}
+    haut: {fournisseur: fred, serie: "DFEDTARU"}
+    reunions: ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16",
+               "2026-10-28", "2026-12-09",
+               "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15",
+               "2027-10-27", "2027-12-08"]
+  bce:
+    nom: "BCE"
+    libelle: "Taux de dépôt"
+    taux: {fournisseur: bce, cle: "FM/D.U2.EUR.4F.KR.DFR.LEV"}
+    reunions: ["2026-10-29", "2026-12-17",
+               "2027-02-04", "2027-03-18", "2027-04-29", "2027-06-10", "2027-07-22", "2027-09-09",
+               "2027-10-28", "2027-12-16",
+               "2028-02-03", "2028-03-23", "2028-05-04", "2028-06-08", "2028-07-20", "2028-09-07",
+               "2028-10-12", "2028-12-07"]
+
+# ---------------------------------------------------------------------
+#  Inflation (glissement annuel, en %)
+#  ⚠ Dates de publication : zone euro récupérées automatiquement
+#  (calendrier Eurostat). États-Unis : À METTRE À JOUR (sources :
+#  https://www.bls.gov/schedule/news_release/cpi.htm et
+#  https://www.bea.gov/news/schedule). France : estimée (dernier jour
+#  ouvré du mois, Insee), sauf si des dates sont listées.
+# ---------------------------------------------------------------------
+inflation:
+  - id: ze
+    nom: "Zone euro"
+    source: "BCE / Eurostat"
+    aide: "Glissement annuel de l'IPCH (indice harmonisé). La sous-jacente exclut énergie, alimentation, alcool et tabac. La BCE vise 2 % à moyen terme et suit la sous-jacente pour juger de la persistance de l'inflation."
+    mesures:
+      - nom: "IPCH"
+        totale: {fournisseur: bce, cle: "HICP/M.U2.N.000000.4D0.ANR"}
+        sous_jacente: {fournisseur: bce, cle: "HICP/M.U2.N.XEF000.4D0.ANR"}
+    publications:
+      automatique: eurostat_flash
+      libelle: "Estimation rapide (Eurostat), 11 h"
+  - id: fr
+    nom: "France"
+    source: "BCE / Insee"
+    aide: "IPCH de la France (indice harmonisé, comparable aux autres pays de la zone euro). L'IPC « national » cité dans la presse par l'Insee est en général un peu plus bas. La sous-jacente exclut énergie, alimentation, alcool et tabac."
+    mesures:
+      - nom: "IPCH"
+        totale: {fournisseur: bce, cle: "HICP/M.FR.N.000000.4D0.ANR"}
+        sous_jacente: {fournisseur: bce, cle: "HICP/M.FR.N.XEF000.4D0.ANR"}
+    publications:
+      automatique: insee_fin_de_mois
+      libelle: "Estimation provisoire (Insee), 8 h 45"
+      dates: ["2026-10-30"]
+  - id: us
+    nom: "États-Unis"
+    source: "FRED (BLS, BEA)"
+    aide: "Le CPI (BLS) mesure les prix payés par les ménages ; le PCE (BEA) couvre un panier plus large et c'est la mesure que la Fed cible à 2 %. La sous-jacente exclut alimentation et énergie. Le PCE est souvent un peu plus bas que le CPI, car le logement y pèse moins."
+    mesures:
+      - nom: "CPI"
+        totale: {fournisseur: fred, serie: "CPIAUCSL", glissement_annuel: true}
+        sous_jacente: {fournisseur: fred, serie: "CPILFESL", glissement_annuel: true}
+        publications: ["2026-10-14", "2026-11-10", "2026-12-10"]
+        libelle: "CPI (BLS), 14 h 30"
+      - nom: "PCE"
+        totale: {fournisseur: fred, serie: "PCEPI", glissement_annuel: true}
+        sous_jacente: {fournisseur: fred, serie: "PCEPILFE", glissement_annuel: true}
+        publications: ["2026-11-04", "2026-12-02"]
+        libelle: "PCE (BEA), 14 h 30"
+
+# ---------------------------------------------------------------------
+#  Agenda : repères fixes transmis à Claude (il complète par recherche web)
+# ---------------------------------------------------------------------
+agenda:
+  adjudications_aft: true   # règle indicative : OAT long terme 1er jeudi, moyen terme et OATi 3e jeudi, BTF chaque lundi
+
+# ---------------------------------------------------------------------
+#  Pied de page : sources affichées
+# ---------------------------------------------------------------------
+sources_pied_de_page:
+  - {quoi: "Taux français (TEC)", nom: "Banque de France (Webstat)", url: "https://webstat.banque-france.fr"}
+  - {quoi: "Taux allemands", nom: "Deutsche Bundesbank", url: "https://www.bundesbank.de/en/statistics/time-series-databases"}
+  - {quoi: "Taux américains, point mort", nom: "US Treasury", url: "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics"}
+  - {quoi: "Actions, pétrole, euro/dollar", nom: "Yahoo Finance", url: "https://finance.yahoo.com"}
+  - {quoi: "Taux de dépôt BCE, IPCH", nom: "BCE (Data Portal)", url: "https://data.ecb.europa.eu"}
+  - {quoi: "Fed, CPI, PCE", nom: "FRED (Fed de Saint-Louis)", url: "https://fred.stlouisfed.org"}
+  - {quoi: "Calendrier d'inflation zone euro", nom: "Eurostat", url: "https://ec.europa.eu/eurostat/news/release-calendar"}
+  - {quoi: "Commentaire", nom: "Claude (Anthropic), avec recherche web", url: "https://www.anthropic.com"}

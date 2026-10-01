@@ -1,0 +1,1 @@
+{"chart": {"result": [{"meta": {"symbol": "^FCHI", "exchangeTimezoneName": "Europe/Paris", "gmtoffset": 7200}, "timestamp": [1790319600, 1790578800, 1790665200, 1790751600, 1790838000], "indicators": {"quote": [{"close": [8077.7998046875, 8078.47998046875, 8035.8701171875, 7964.509765625, 7835.31005859375]}]}}], "error": null}}

@@ -1,0 +1,135 @@
+# Brief marchés : génération quotidienne, publication sur GitHub Pages et notification ntfy.
+#
+# Les heures « cron » sont en UTC. Le workflow démarre toutes les 30 minutes entre
+# 4 h et 8 h UTC en semaine ; le portier (brief/gate.py) ne génère le brief qu'au
+# premier créneau qui suit « heure_cible − avance_minutes » (heure de Paris, voir
+# config.yaml). Les autres créneaux s'arrêtent en quelques secondes. Le passage à
+# l'heure d'été ou d'hiver est donc automatique.
+name: Brief marchés
+
+on:
+  schedule:
+    - cron: "17,47 4-8 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      sans_commentaire:
+        description: "Ne pas appeler Claude (test gratuit)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: brief-marches
+  cancel-in-progress: false
+
+jobs:
+  generer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      generated: ${{ steps.gen.outputs.generated }}
+      notification: ${{ steps.notif.outputs.notification }}
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Est-ce l'heure ?
+        id: gate
+        run: python3 -m brief.gate ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+
+      - name: Installer Python
+        if: steps.gate.outputs.go == 'true'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        if: steps.gate.outputs.go == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Générer le brief
+        id: gen
+        if: steps.gate.outputs.go == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          BDF_API_KEY: ${{ secrets.BDF_API_KEY }}
+        run: |
+          ARGS="--force"
+          if [ "${{ inputs.sans_commentaire }}" = "true" ]; then ARGS="$ARGS --no-commentary"; fi
+          python -m brief.main $ARGS
+
+      - name: Préparer la notification
+        id: notif
+        if: steps.gen.outputs.generated == 'true'
+        run: echo "notification=$(base64 -w0 notification.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Enregistrer l'historique et les archives dans le dépôt
+        if: steps.gen.outputs.generated == 'true'
+        run: |
+          git config user.name "brief-marches[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data site
+          if git diff --cached --quiet; then echo "Rien à enregistrer"; exit 0; fi
+          git commit -m "Brief du $(TZ=Europe/Paris date +%F)"
+          for i in 1 2 3; do
+            git pull --rebase --autostash && git push && exit 0
+            sleep 5
+          done
+          echo "Impossible d'enregistrer dans le dépôt" && exit 1
+
+      - name: Préparer la publication
+        if: steps.gen.outputs.generated == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Empaqueter le site
+        if: steps.gen.outputs.generated == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  publier:
+    needs: generer
+    if: needs.generer.outputs.generated == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Publier sur GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
+
+      - name: Notification iPhone (ntfy)
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NOTIF: ${{ needs.generer.outputs.notification }}
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then echo "Secret NTFY_TOPIC absent : pas de notification."; exit 0; fi
+          BODY=$(echo "$NOTIF" | base64 -d)
+          if [ "$(echo "$BODY" | jq -r '.skip // false')" = "true" ]; then echo "Pas de notification aujourd'hui."; exit 0; fi
+          echo "$BODY" | jq --arg t "$NTFY_TOPIC" --arg u "$PAGE_URL" \
+            'del(.skip) + {topic: $t, click: $u, actions: [{action: "view", label: "Ouvrir le brief", url: $u}]}' \
+            | curl -fsS -H "Content-Type: application/json" --data-binary @- https://ntfy.sh/ > /dev/null
+          echo "Notification envoyée."
+
+  alerte:
+    needs: [generer, publier]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notification d'échec
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then exit 0; fi
+          jq -n --arg t "$NTFY_TOPIC" --arg u "$RUN_URL" \
+            '{topic: $t, title: "⚠ Brief marchés : échec", message: "La génération du brief a échoué. Touchez pour voir les journaux.", click: $u, tags: ["warning"], priority: 4}' \
+            | curl -fsS -H "Content-Type: application/json" --data-binary @- https://ntfy.sh/ > /dev/null

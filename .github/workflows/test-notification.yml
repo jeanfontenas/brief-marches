@@ -1,0 +1,22 @@
+# Envoie une notification de test sur l'iPhone (onglet Actions > « Test de notification » > Run workflow).
+name: Test de notification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer une notification de test
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then echo "Le secret NTFY_TOPIC n'est pas défini." && exit 1; fi
+          jq -n --arg t "$NTFY_TOPIC" \
+            '{topic: $t, title: "Brief marchés : test", message: "Les notifications fonctionnent.", tags: ["white_check_mark"]}' \
+            | curl -fsS -H "Content-Type: application/json" --data-binary @- https://ntfy.sh/ > /dev/null
+          echo "Notification de test envoyée."

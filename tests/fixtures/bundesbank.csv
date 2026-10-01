@@ -1,0 +1,12 @@
+﻿"",BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R005X.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R005X.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R01XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R01XX.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R02XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R02XX.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R05XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R05XX.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R20XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R20XX.R.A.A._Z._Z.A_FLAGS,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R30XX.R.A.A._Z._Z.A,BBSIS.D.I.ZST.ZI.EUR.S1311.B.A604.R30XX.R.A.A._Z._Z.A_FLAGS
+"",Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 0.5 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 1.0 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 2.0 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 5.0 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 10.0 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 20.0 years / daily data,,Term structure of interest rates on listed Federal securities (method by Svensson) / residual maturity of 30.0 years / daily data,
+Comment (in english),,,,,,,,,,,,,,
+Decimals,2,,2,,2,,2,,2,,2,,2,
+Time format code,P1D,,P1D,,P1D,,P1D,,P1D,,P1D,,P1D,
+category,ZRZS,,ZRZS,,ZRZS,,ZRZS,,ZRZS,,ZRZS,,ZRZS,
+unit,PROZENT,,Prozent,,Prozent,,Prozent,,Prozent,,Prozent,,Prozent,
+unit multiplier,One,,One,,One,,One,,One,,One,,One,
+last update,2026-10-01 12:45:16,,2026-10-01 12:45:16,,2026-10-01 12:45:16,,2026-10-01 12:45:16,,2026-10-01 12:45:17,,2026-10-01 12:45:17,,2026-10-01 12:45:18,
+2026-09-29,2.79,,3.07,,3.29,,3.41,,3.68,,3.94,,4.03,
+2026-09-30,2.78,,3.04,,3.24,,3.36,,3.64,,3.90,,3.99,
+2026-10-01,2.78,,3.02,,3.21,,3.35,,3.66,,3.94,,4.03,

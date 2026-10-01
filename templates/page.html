@@ -545,8 +545,9 @@ window.__loadFallbackChart = function () {
       c.appendChild(chg);
     }
     if (ind.status !== 'ok') {
-      var msg = ind.status === 'unavailable' && !hasLast ? 'Donnée indisponible' :
-        'Donnée indisponible ce matin · dernière valeur connue' + (hasLast ? ' : ' + dMed(ts(ind.last.date)) : '');
+      var msg = !hasLast ? 'Donnée indisponible' :
+        ind.status === 'stale' ? 'Pas de nouvelle donnée : valeur du ' + dMed(ts(ind.last.date)) :
+        'Source indisponible ce matin · dernière valeur connue : ' + dMed(ts(ind.last.date));
       c.appendChild(el('p', 'flag', msg));
     }
     var P = pts(ind.series || { t: [], v: [] });
@@ -557,7 +558,7 @@ window.__loadFallbackChart = function () {
     spark.appendChild(cv); c.appendChild(spark);
     var ro = el('p', 'readout'); c.appendChild(ro);
     var seg = el('div', 'seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Période du graphique');
-    var cur = '3M';
+    var cur = (M.default_range && /^(1M|3M|1A|5A)$/.test(M.default_range)) ? M.default_range : '3M';
     function windowPts() {
       if (!P.length) return [];
       var days = RANGES.filter(function (r) { return r[0] === cur; })[0][1], from = P[P.length - 1].x - days * DAY;
@@ -684,7 +685,8 @@ window.__loadFallbackChart = function () {
     }
     show(i10);
     var cv = chartBox(p, false, 'Courbe des taux ' + cty.label);
-    if (cty.status && cty.status !== 'ok') p.appendChild(el('p', 'note', 'Courbe incomplète : certaines maturités sont indisponibles.'));
+    if (cty.status === 'partial') p.appendChild(el('p', 'note', 'Certaines maturités n\'ont pas pu être mises à jour ce matin.'));
+    if (cty.status === 'unavailable') p.appendChild(el('p', 'note', 'Courbe indisponible ce matin.'));
     curvesEl.appendChild(p);
     register(function () {
       var col = C['c-' + cty.id] || C['c-fr'];
@@ -765,8 +767,8 @@ window.__loadFallbackChart = function () {
       return t;
     }
     var fed = CB.fed, ecb = CB.ecb;
-    if (fed) tiles.appendChild(tile(fed, num(fed.lower, 2) + '–' + num(fed.upper, 2) + NNBSP + '%'));
-    if (ecb) tiles.appendChild(tile(ecb, pct(ecb.value)));
+    if (fed) tiles.appendChild(tile(fed, fed.lower != null ? num(fed.lower, 2) + '–' + num(fed.upper, 2) + NNBSP + '%' : 'Indisponible'));
+    if (ecb) tiles.appendChild(tile(ecb, ecb.value != null ? pct(ecb.value) : 'Indisponible'));
     var pc = panel('Taux directeurs sur 5 ans', 'Fed : fourchette cible · BCE : taux de dépôt');
     // Séries en escalier densifiées (un point par semaine) pour une lecture continue au doigt.
     function densify(P) {
@@ -779,7 +781,7 @@ window.__loadFallbackChart = function () {
       out.push(P[P.length - 1]);
       return out;
     }
-    var FL = fed ? densify(pts(fed.series, 'lower')) : [], FU = fed ? densify(pts(fed.series, 'upper')) : [], EC = ecb ? densify(pts(ecb.series)) : [];
+    var FL = fed && fed.series ? densify(pts(fed.series, 'lower')) : [], FU = fed && fed.series ? densify(pts(fed.series, 'upper')) : [], EC = ecb && ecb.series ? densify(pts(ecb.series)) : [];
     var lgc = legend(pc, [{ label: 'Fed', colorVar: '--c-us', band: true }, { label: 'BCE', colorVar: '--c-ea' }]);
     function showCB(x) {
       var xx = x == null ? Infinity : x;
@@ -817,7 +819,7 @@ window.__loadFallbackChart = function () {
         b.addEventListener('click', function () {
           vi = i; seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
           if (rec.chart) { rec.chart.destroy(); rec.chart = rec.build(); }
-          show(null);
+          show(null); showNext();
         });
         seg.appendChild(b);
       });
@@ -833,10 +835,18 @@ window.__loadFallbackChart = function () {
     }
     show(null);
     var cv = chartBox(p, false, 'Inflation ' + reg.label);
-    if (reg.next_release) p.appendChild(el('p', 'note', 'Prochaine publication : ' + reg.next_release.label + (reg.next_release.date ? ' (' + dMed(ts(reg.next_release.date)) + ')' : '')));
+    var nextEl = el('p', 'note');
+    function showNext() {
+      var nr = views[vi] && views[vi].next_release || reg.next_release;
+      nextEl.textContent = nr ? 'Prochaine publication : ' + (nr.date ? cap(dLong(ts(nr.date))) + ' · ' : '') + nr.label : '';
+      nextEl.hidden = !nr;
+    }
+    showNext();
+    p.appendChild(nextEl);
     inflEl.appendChild(p);
     var rec = register(function () {
       var s = series(), T = s.T, K = s.K;
+      cv.parentNode.hidden = !T.length;
       if (!T.length) return null;
       var minX = T[0].x, maxX = T[T.length - 1].x;
       var ds = [
@@ -864,6 +874,8 @@ window.__loadFallbackChart = function () {
   if (CM.available) {
     proseBlock('Hier sur les marchés', CM.hier);
     proseBlock('Ce que ça implique', CM.implications);
+  } else if (M.status === 'closed') {
+    com.appendChild(el('p', 'empty', 'Pas de commentaire ce matin : les marchés étaient fermés hier.'));
   } else {
     com.appendChild(el('p', 'empty', 'Le commentaire n\'a pas pu être rédigé ce matin. Les chiffres et graphiques ci-dessus sont à jour.'));
   }
