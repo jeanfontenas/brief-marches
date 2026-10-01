@@ -23,7 +23,7 @@ def fr_date(d: date, weekday: bool = True) -> str:
 
 
 def fr_num(v: float, dec: int) -> str:
-    s = f"{abs(v):,.{dec}f}".replace(",", " ").replace(".", ",")
+    s = f"{abs(v):,.{dec}f}".replace(",", "\u202f")  # point décimal, espace fine pour les milliers
     return ("−" if v < 0 and any(c in s for c in "123456789") else "") + s
 
 

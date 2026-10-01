@@ -170,7 +170,7 @@ indicateurs:
     decimales: 2
     variation: "bp"
     calcul: {difference: [ust10, tips10], facteur: 1}
-    aide: "Écart entre le rendement du Treasury 10 ans classique et celui du Treasury indexé sur l'inflation (TIPS). Il donne l'inflation moyenne anticipée par le marché sur 10 ans, à une prime de risque près. La Fed le surveille pour vérifier que les anticipations restent ancrées autour de 2 %."
+    aide: "Écart entre le rendement du Treasury 10 ans classique et celui du Treasury indexé sur l'inflation (TIPS). Il donne l'inflation moyenne anticipée par le marché sur 10 ans, à une prime de risque près. La Fed le surveille pour vérifier que les anticipations restent ancrées autour de 2%."
 
   # Série utilisée seulement pour le calcul du point mort (pas de carte).
   tips10:
@@ -301,7 +301,7 @@ inflation:
   - id: ze
     nom: "Zone euro"
     source: "BCE / Eurostat"
-    aide: "Glissement annuel de l'IPCH (indice harmonisé). La sous-jacente exclut énergie, alimentation, alcool et tabac. La BCE vise 2 % à moyen terme et suit la sous-jacente pour juger de la persistance de l'inflation."
+    aide: "Glissement annuel de l'IPCH (indice harmonisé). La sous-jacente exclut énergie, alimentation, alcool et tabac. La BCE vise 2% à moyen terme et suit la sous-jacente pour juger de la persistance de l'inflation."
     mesures:
       - nom: "IPCH"
         totale: {fournisseur: bce, cle: "HICP/M.U2.N.000000.4D0.ANR"}
@@ -324,7 +324,7 @@ inflation:
   - id: us
     nom: "États-Unis"
     source: "FRED (BLS, BEA)"
-    aide: "Le CPI (BLS) mesure les prix payés par les ménages ; le PCE (BEA) couvre un panier plus large et c'est la mesure que la Fed cible à 2 %. La sous-jacente exclut alimentation et énergie. Le PCE est souvent un peu plus bas que le CPI, car le logement y pèse moins."
+    aide: "Le CPI (BLS) mesure les prix payés par les ménages ; le PCE (BEA) couvre un panier plus large et c'est la mesure que la Fed cible à 2%. La sous-jacente exclut alimentation et énergie. Le PCE est souvent un peu plus bas que le CPI, car le logement y pèse moins."
     mesures:
       - nom: "CPI"
         totale: {fournisseur: fred, serie: "CPIAUCSL", glissement_annuel: true}

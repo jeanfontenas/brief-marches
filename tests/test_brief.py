@@ -72,12 +72,12 @@ def test_gate_lit_la_config():
 
 # ------------------------------------------------------------------ formats français
 def test_formats():
-    assert build.fr_num(3.4219, 2) == "3,42"
-    assert build.fr_num(7964.51, 2) == "7\u202f964,51"
-    assert build.fr_num(-0.5, 2) == "\u22120,50"
+    assert build.fr_num(3.4219, 2) == "3.42"
+    assert build.fr_num(7964.51, 2) == "7\u202f964.51"
+    assert build.fr_num(-0.5, 2) == "\u22120.50"
     assert build.fr_signed(5, 0) == "+5"
     assert build.fr_signed(-4, 0) == "\u22124"
-    assert build.fr_signed(0.004, 2) == "0,00"
+    assert build.fr_signed(0.004, 2) == "0.00"
     assert build.fr_date(date(2026, 10, 1)) == "jeudi 1er octobre 2026"
 
 
@@ -314,7 +314,7 @@ def test_commentaire_avec_reponse_simulee_du_sdk(monkeypatch, tmp_path):
     monkeypatch.setattr(anthropic, "Anthropic", FakeClient)
     import yaml
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-    out = commentary.generate(cfg, {"indicateurs": [{"niveau": "3,64 %"}]}, date(2026, 10, 1), tmp_path / "c.csv")
+    out = commentary.generate(cfg, {"indicateurs": [{"niveau": "3.64%"}]}, date(2026, 10, 1), tmp_path / "c.csv")
     assert out["available"] is True and out["essentiel"][0] == "Les taux montent."
     assert "https://www.lesechos.fr/y" in [s["url"] for s in out["sources"]]
     assert calls[0]["fallbacks"] == "default" and calls[0]["tools"][0]["type"] == "web_search_20260318"
@@ -353,5 +353,24 @@ def test_exemples_de_requetes_dates_du_jour():
 def test_balises_de_citation_retirees():
     raw = 'Paris : (cite index="3-3">le CAC 40 a reculé</cite>, <cite index="2-7">inflation à 3 %</cite>.'
     out = commentary.clean({"essentiel": [raw], "hier": raw, "implications": "", "agenda": [], "sources": []}, [])
-    assert out["hier"] == "Paris : le CAC 40 a reculé, inflation à 3 %."
+    assert out["hier"] == "Paris : le CAC 40 a reculé, inflation à 3%."
     assert "cite" not in out["essentiel"][0]
+
+
+def test_nombres_au_point_decimal():
+    raw = "L'OAT 10 ans passe de 3,74 % à 3,80\u202f%, le CAC 40 à 7\u202f964,51 points (1, 2 et 3)."
+    out = commentary.clean({"essentiel": [raw], "hier": raw, "implications": "", "agenda": [], "sources": []}, [])
+    assert out["hier"] == "L'OAT 10 ans passe de 3.74% à 3.80%, le CAC 40 à 7\u202f964.51 points (1, 2 et 3)."
+
+
+def test_reprise_du_commentaire_publie(tmp_path):
+    from brief import main
+    from brief.render import write_site
+    com = {"available": True, "essentiel": ['OAT à (cite index="1-2">3,74 %</cite>.'], "hier": "", "implications": "",
+           "agenda": [], "sources": [{"titre": "AFP", "url": "https://example.com"}], "cout_usd": 0.3}
+    data = {"meta": {"title": "Brief", "brief_date": "2026-10-01"}, "essentiel": com["essentiel"], "commentary": com}
+    write_site(data, tmp_path, date(2026, 10, 1), "Brief")
+    out = main.reused_commentary(tmp_path, date(2026, 10, 1))
+    assert out["essentiel"] == ["OAT à 3.74%."] and out["sources"][0]["url"] == "https://example.com"
+    assert out["cout_usd"] == 0.3
+    assert main.reused_commentary(tmp_path, date(2026, 10, 2)) is None

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -52,7 +53,7 @@ def gh_output(**kw) -> None:
 def fmt_level(ind: dict, v: float) -> str:
     u = ind["unit"]
     if u == "%":
-        return build.fr_num(v, ind["decimals"]) + " %"
+        return build.fr_num(v, ind["decimals"]) + "%"
     if u == "bp":
         return build.fr_num(v, 0) + " bp"
     if u == "$":
@@ -65,7 +66,7 @@ def fmt_change(ind: dict, c: float | None) -> str:
         return "n.d."
     if ind["change_mode"] == "bp":
         return build.fr_signed(round(c), 0) + " bp"
-    return build.fr_signed(c, 2) + " %"
+    return build.fr_signed(c, 2) + "%"
 
 
 def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, slope: dict, cb: dict,
@@ -106,7 +107,7 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
             v = snaps["j"]["values"][i]
             if v is None:
                 continue
-            item = {"niveau": build.fr_num(v, 2) + " %"}
+            item = {"niveau": build.fr_num(v, 2) + "%"}
             for k, lab in (("1s", "variation_1_semaine"), ("1m", "variation_1_mois"), ("1a", "variation_1_an")):
                 old = snaps.get(k, {}).get("values", [None] * len(curves["maturities"]))[i]
                 if old is not None:
@@ -121,9 +122,9 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
         b = cb.get(k, {})
         item = {"taux": "indisponible"}
         if k == "fed" and "lower" in b:
-            item["taux"] = f"{build.fr_num(b['lower'], 2)}–{build.fr_num(b['upper'], 2)} %"
+            item["taux"] = f"{build.fr_num(b['lower'], 2)}–{build.fr_num(b['upper'], 2)}%"
         if k == "ecb" and "value" in b:
-            item["taux"] = build.fr_num(b["value"], 2) + " %"
+            item["taux"] = build.fr_num(b["value"], 2) + "%"
         if b.get("last_change"):
             item["dernier_changement"] = f"{build.fr_signed(b['last_change']['bp'], 0)}\u00a0bp, en vigueur le {b['last_change']['date']}"
         if b.get("next_meeting"):
@@ -134,8 +135,8 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
         for v in reg["views"]:
             if v["total"]["t"]:
                 inflation[f"{reg['label']} {v['label']}"] = {
-                    "mois": v["total"]["t"][-1], "totale": build.fr_num(v["total"]["v"][-1], 1) + " %",
-                    "sous_jacente": build.fr_num(v["core"]["v"][-1], 1) + " %" if v["core"]["v"] else "n.d.",
+                    "mois": v["total"]["t"][-1], "totale": build.fr_num(v["total"]["v"][-1], 1) + "%",
+                    "sous_jacente": build.fr_num(v["core"]["v"][-1], 1) + "%" if v["core"]["v"] else "n.d.",
                 }
     return {
         "date_du_brief": build.fr_date(today), "seance_couverte": build.fr_date(data_date),
@@ -143,6 +144,21 @@ def commentary_payload(today: date, data_date: date, inds: dict, curves: dict, s
         "indicateurs": rows, "courbes_de_taux": courbes, "banques_centrales": bc, "inflation": inflation,
         "evenements_prevus_aujourd_hui_reperes": events, "avertissements": notices,
     }
+
+
+def reused_commentary(site: Path, today: date) -> dict | None:
+    """Commentaire de la page déjà publiée aujourd'hui, nettoyé à nouveau (republication sans appel à Claude)."""
+    page = site / "index.html"
+    if not page.exists():
+        return None
+    m = re.search(r'<script id="brief-data" type="application/json">(.*?)</script>', page.read_text(encoding="utf-8"), re.S)
+    if not m:
+        return None
+    old = json.loads(m.group(1))
+    com = old.get("commentary") or {}
+    if old.get("meta", {}).get("brief_date") != today.isoformat() or not com.get("available"):
+        return None
+    return {**com, **commentary.clean(com, [])}
 
 
 def run(args) -> int:
@@ -201,6 +217,13 @@ def run(args) -> int:
 
     if status == "closed" or args.no_commentary:
         com = {"available": False, "error": "marchés fermés" if status == "closed" else "désactivé"}
+    elif args.reutiliser_commentaire:
+        com = reused_commentary(Path(args.site), today)
+        if com:
+            log.info("Commentaire repris de la page déjà publiée aujourd'hui (pas de nouvel appel à Claude).")
+        else:
+            log.warning("Aucun commentaire publié aujourd'hui à reprendre : page sans commentaire.")
+            com = {"available": False, "error": "désactivé"}
     else:
         payload = commentary_payload(today, data_date, inds, curves, slope, cb, infl, events, notices)
         com = commentary.generate(cfg, payload, today, ROOT / "data" / "couts_claude.csv")
@@ -258,6 +281,8 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Génère le brief marchés du jour")
     p.add_argument("--force", action="store_true", help="génère même si ce n'est pas l'heure ou si c'est déjà fait")
     p.add_argument("--no-commentary", action="store_true", help="n'appelle pas Claude")
+    p.add_argument("--reutiliser-commentaire", action="store_true",
+                   help="reprend le commentaire déjà publié aujourd'hui au lieu de rappeler Claude")
     p.add_argument("--config", default=str(ROOT / "config.yaml"))
     p.add_argument("--site", default=str(ROOT / "site"))
     p.add_argument("--notification", default=str(ROOT / "notification.json"))

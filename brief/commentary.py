@@ -24,7 +24,7 @@ Recherche web (indispensable) : explique les mouvements de la séance couverte �
 - Sources acceptées : banques centrales, instituts statistiques, Agence France Trésor, agences et presse économique (Reuters, AP, AFP, Bloomberg, CNBC, MarketWatch, Les Échos, Le Monde, BFM Bourse, Boursorama, Zonebourse, L'Agefi, Le Figaro Bourse, Investir).
 - Cite chaque explication par un lien Markdown [texte](url) vers la page trouvée (jamais de balises <cite> ni d'index de citation), et liste ces pages dans « sources ». Ne dis pas que tu n'as rien trouvé si des résultats pertinents existent ; si une explication reste incertaine, dis-le pour ce point seulement.
 
-Style : français, ton clair et pédagogique, phrases courtes, format français des nombres (« 3,42 % », « +5 bp », virgule décimale). Écris « bp » pour les points de base. Pas de recommandation d'investissement.
+Style : français, ton clair et pédagogique, phrases courtes, nombres avec un point décimal et le signe % collé, exactement comme dans les DONNÉES (« 3.42% », « +5 bp », « 7 964.51 », « 103.53 $ »), jamais de virgule décimale. Écris « bp » pour les points de base. Pas de recommandation d'investissement.
 
 Réponds uniquement par un objet JSON valide, sans texte avant ni après, de la forme :
 {
@@ -100,7 +100,11 @@ CITE_TAG = re.compile(r"[<(]\s*/?\s*cite\b[^>]*>")
 
 def strip_cite_tags(text: str) -> str:
     """Retire les balises de citation brutes (<cite index="…">…</cite>) en gardant le texte cité."""
-    return re.sub(r"  +", " ", CITE_TAG.sub("", text))
+    text = CITE_TAG.sub("", text)
+    # Point décimal (3,74 -> 3.74), sans toucher aux adresses des liens [texte](url).
+    text = re.sub(r"(\]\([^)]*\))|(?<=\d),(?=\d)", lambda m: m.group(1) or ".", text)
+    text = re.sub(r"(?<=\d)[ \u00a0\u202f]%", "%", text)  # 3.74 % -> 3.74%
+    return re.sub(r"  +", " ", text)
 
 
 def _text_and_citations(content) -> tuple[str, list[dict]]:
@@ -280,7 +284,7 @@ def _log_cost(path: Path, today: date, model: str, usage, cost: float) -> None:
                     getattr(usage, "output_tokens", 0), searches, f"{cost:.4f}"])
 
 
-NUM_RE = re.compile(r"[+−-]?\d[\d   ]*(?:,\d+)?\s?(?:%|bp|\$)")
+NUM_RE = re.compile(r"[+−-]?\d[\d   ]*(?:[.,]\d+)?\s?(?:%|bp|\$)")
 
 
 def check_numbers(out: dict, payload: dict) -> None:
@@ -297,4 +301,4 @@ def check_numbers(out: dict, payload: dict) -> None:
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"[\s  +]", "", s).replace("−", "-").lstrip("-")
+    return re.sub(r"[\s  +]", "", s).replace("−", "-").replace(",", ".").lstrip("-")

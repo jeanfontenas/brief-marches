@@ -260,7 +260,7 @@ dialog.sheet::backdrop { background: rgba(5, 8, 12, 0.45); }
 
   <section id="inflation" aria-labelledby="h-infl">
     <div class="sec-h"><h2 id="h-infl">Inflation</h2></div>
-    <p class="sec-sub">Glissement annuel sur 3 ans, inflation totale et sous-jacente. Pointillés : cible de 2 %.</p>
+    <p class="sec-sub">Glissement annuel sur 3 ans, inflation totale et sous-jacente. Pointillés : cible de 2%.</p>
     <div class="panels three" id="infl"></div>
   </section>
 
@@ -309,18 +309,20 @@ window.__loadFallbackChart = function () {
   var nfCache = {};
   function nf(d) { return nfCache[d] || (nfCache[d] = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })); }
   function isZero(s) { return !/[1-9]/.test(s); }
-  function num(v, d) { var s = nf(d).format(Math.abs(v)); return (v < 0 && !isZero(s) ? MINUS : '') + s; }
-  function signed(v, d) { var s = nf(d).format(Math.abs(v)); return isZero(s) ? s : (v > 0 ? '+' : MINUS) + s; }
-  function pct(v, d) { return num(v, d == null ? 2 : d) + NNBSP + '%'; }
+  // Point décimal ; espace fine pour les milliers (7 964.51).
+  function fmt(d, x) { return nf(d).format(x).replace(',', '.'); }
+  function num(v, d) { var s = fmt(d, Math.abs(v)); return (v < 0 && !isZero(s) ? MINUS : '') + s; }
+  function signed(v, d) { var s = fmt(d, Math.abs(v)); return isZero(s) ? s : (v > 0 ? '+' : MINUS) + s; }
+  function pct(v, d) { return num(v, d == null ? 2 : d) + '%'; }
   function fmtLevel(ind, v) {
     if (v == null || isNaN(v)) return '—';
-    if (ind.unit === '%') return num(v, ind.decimals) + NNBSP + '%';
+    if (ind.unit === '%') return num(v, ind.decimals) + '%';
     if (ind.unit === 'bp') return num(v, 0) + NBSP + 'bp';
     if (ind.unit === '$') return num(v, ind.decimals) + NBSP + '$';
     return num(v, ind.decimals);
   }
   function bp(v) { return signed(Math.round(v), 0) + NBSP + 'bp'; }
-  function fmtChange(ind, c) { return ind.change_mode === 'bp' ? bp(c) : signed(c, 2) + NNBSP + '%'; }
+  function fmtChange(ind, c) { return ind.change_mode === 'bp' ? bp(c) : signed(c, 2) + '%'; }
   function rounded(ind, c) { return ind.change_mode === 'bp' ? Math.round(c) : Math.round(c * 100) / 100; }
   function ts(iso) {
     var p = iso.split('-');
@@ -577,7 +579,7 @@ window.__loadFallbackChart = function () {
       var delta = ind.change_mode === 'bp' ? (ind.unit === 'bp' ? last.y - first.y : (last.y - first.y) * 100) : (last.y / first.y - 1) * 100;
       var prefix = span < wanted * 0.9 && cur !== '5A' ? 'Depuis le ' + dShort(first.x) : 'Sur ' + label;
       if (cur === '5A' && span < 5 * 365 * 0.95) prefix = 'Depuis le ' + dMed(first.x);
-      ro.textContent = prefix + ' : ' + (ind.change_mode === 'bp' ? bp(delta) : signed(delta, 1) + NNBSP + '%');
+      ro.textContent = prefix + ' : ' + (ind.change_mode === 'bp' ? bp(delta) : signed(delta, 1) + '%');
     }
     // Couleur du mini-graphique : vert si hausse sur la période affichée, rouge si baisse.
     function trendColor(w) {
@@ -771,7 +773,7 @@ window.__loadFallbackChart = function () {
       return t;
     }
     var fed = CB.fed, ecb = CB.ecb;
-    if (fed) tiles.appendChild(tile(fed, fed.lower != null ? num(fed.lower, 2) + '–' + num(fed.upper, 2) + NNBSP + '%' : 'Indisponible'));
+    if (fed) tiles.appendChild(tile(fed, fed.lower != null ? num(fed.lower, 2) + '–' + num(fed.upper, 2) + '%' : 'Indisponible'));
     if (ecb) tiles.appendChild(tile(ecb, ecb.value != null ? pct(ecb.value) : 'Indisponible'));
     var pc = panel('Taux directeurs sur 5 ans', 'Fed : fourchette cible · BCE : taux de dépôt');
     // Séries en escalier densifiées (un point par semaine) pour une lecture continue au doigt.
@@ -790,7 +792,7 @@ window.__loadFallbackChart = function () {
     function showCB(x) {
       var xx = x == null ? Infinity : x;
       var l = stepAt(FL, xx), u = stepAt(FU, xx), e = stepAt(EC, xx);
-      lgc.set(x == null ? 'Aujourd\'hui' : dMed(x), [l && u ? num(l.y, 2) + '–' + num(u.y, 2) + NNBSP + '%' : '—', e ? pct(e.y) : '—']);
+      lgc.set(x == null ? 'Aujourd\'hui' : dMed(x), [l && u ? num(l.y, 2) + '–' + num(u.y, 2) + '%' : '—', e ? pct(e.y) : '—']);
     }
     showCB(null);
     var cvc = chartBox(pc, true, 'Taux directeurs de la Fed et de la BCE sur 5 ans');
@@ -802,7 +804,7 @@ window.__loadFallbackChart = function () {
         { data: FU, borderColor: us, borderWidth: 1.5, pointRadius: 0, stepped: true, fill: '-1', backgroundColor: alpha(us, 0.18) },
         { data: EC, borderColor: ea, borderWidth: 2, pointRadius: 0, stepped: true }
       ];
-      var opts = baseOptions({ x: timeScale(6), y: yScale(function (v) { return num(v, 0) + NNBSP + '%'; }) }, function (dp) { showCB(dp ? dp.raw.x : null); });
+      var opts = baseOptions({ x: timeScale(6), y: yScale(function (v) { return num(v, 0) + '%'; }) }, function (dp) { showCB(dp ? dp.raw.x : null); });
       opts.plugins.zeroLine = { on: true };
       return new Chart(cvc, { type: 'line', data: { datasets: ds }, options: opts, plugins: [crosshair, zeroLine] });
     }, function () { showCB(null); });
@@ -832,10 +834,10 @@ window.__loadFallbackChart = function () {
     function series() { var v = views[vi]; return { T: pts(v.total), K: pts(v.core) }; }
     function show(x) {
       var s = series(), T = s.T, K = s.K;
-      if (!T.length) { lg.set('Données indisponibles', ['—', '—', '2' + NNBSP + '%']); return; }
+      if (!T.length) { lg.set('Données indisponibles', ['—', '—', '2%']); return; }
       var t = x == null ? T[T.length - 1] : nearest(T, x), k = K.length ? (x == null ? K[K.length - 1] : nearest(K, t.x)) : null;
       var head = (x == null ? 'Dernier chiffre : ' : '') + dMonth(t.x) + (views.length > 1 ? ' · ' + views[vi].label : '');
-      lg.set(head, [pct(t.y, 1), k && Math.abs(k.x - t.x) < 20 * DAY ? pct(k.y, 1) : '—', '2' + NNBSP + '%']);
+      lg.set(head, [pct(t.y, 1), k && Math.abs(k.x - t.x) < 20 * DAY ? pct(k.y, 1) : '—', '2%']);
     }
     show(null);
     var cv = chartBox(p, false, 'Inflation ' + reg.label);
@@ -858,7 +860,7 @@ window.__loadFallbackChart = function () {
         { data: K, borderColor: C['c-core'], borderWidth: 2, pointRadius: 0, pointHoverRadius: 3, pointHoverBackgroundColor: C['c-core'], tension: 0 },
         { data: T, borderColor: C['c-total'], borderWidth: 2, pointRadius: 0, pointHoverRadius: 3, pointHoverBackgroundColor: C['c-total'], tension: 0 }
       ];
-      var opts = baseOptions({ x: timeScale(6), y: yScale(function (v) { return num(v, 0) + NNBSP + '%'; }, { beginAtZero: true }) }, function (dp) {
+      var opts = baseOptions({ x: timeScale(6), y: yScale(function (v) { return num(v, 0) + '%'; }, { beginAtZero: true }) }, function (dp) {
         show(dp ? dp.raw.x : null);
       });
       opts.plugins.zeroLine = { on: true };

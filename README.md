@@ -35,7 +35,7 @@ Pour un nouvel indice, copie un bloc existant (par exemple `cac40`), change l'id
 - **Arrêt complet** : onglet **Actions** du dépôt, puis **Brief marchés** dans la liste de gauche, puis le bouton **…** et **Disable workflow**. Pour relancer : **Enable workflow**.
 
 ### Lancer un brief à la main
-Onglet **Actions**, puis **Brief marchés**, puis **Run workflow** et le bouton vert **Run workflow**. Coche « Ne pas appeler Claude » pour un test gratuit, sans commentaire.
+Onglet **Actions**, puis **Brief marchés**, puis **Run workflow** et le bouton vert **Run workflow**. Coche « Ne pas appeler Claude » pour un test gratuit, sans commentaire. Coche « Reprendre le commentaire déjà publié aujourd'hui » pour republier la page du jour (après une modification de la mise en page, par exemple) sans nouvel appel à Claude, donc sans coût.
 
 ### Mettre à jour les calendriers (une fois par an, en décembre)
 Dans `config.yaml` :

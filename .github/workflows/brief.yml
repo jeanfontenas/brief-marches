@@ -16,6 +16,10 @@ on:
         description: "Ne pas appeler Claude (test gratuit)"
         type: boolean
         default: false
+      reutiliser_commentaire:
+        description: "Reprendre le commentaire déjà publié aujourd'hui (republier sans rappeler Claude)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -62,6 +66,7 @@ jobs:
         run: |
           ARGS="--force"
           if [ "${{ inputs.sans_commentaire }}" = "true" ]; then ARGS="$ARGS --no-commentary"; fi
+          if [ "${{ inputs.reutiliser_commentaire }}" = "true" ]; then ARGS="$ARGS --reutiliser-commentaire"; fi
           python -m brief.main $ARGS
 
       - name: Préparer la notification
