@@ -94,6 +94,7 @@ spx = bridge(D5, [(D5[0], 4357), (Y(2022, 10, 12), 3577), (Y(2023, 12, 29), 4770
 brent = bridge(D5, [(D5[0], 78.5), (Y(2022, 6, 8), 123.6), (Y(2023, 6, 12), 72.0), (Y(2024, 4, 5), 91.2),
                     (Y(2025, 5, 5), 60.2), (Y(2025, 9, 30), 67.0), (END, 66.85)], 0.9)
 wti = [round(b - 3.4 + 0.6 * math.sin(i / 40), 2) for i, b in enumerate(brent)]
+dubai = [round(b - 1.2 + 0.9 * math.sin(i / 25), 2) for i, b in enumerate(brent)]
 eurusd = bridge(D5, [(D5[0], 1.158), (Y(2022, 9, 27), 0.962), (Y(2023, 7, 17), 1.124), (Y(2025, 1, 13), 1.022),
                      (Y(2025, 9, 30), 1.173), (END, 1.1742)], 0.0035)
 
@@ -104,6 +105,7 @@ for s, v in ((de10, 2.68), (us10, 4.12), (de2, 2.02), (us2, 3.55), (be10, 2.31),
 de10[-2], us10[-2], de2[-2], us2[-2] = 2.65, 4.09, 2.03, 3.57
 be10[-2], cac[-2], spx[-2], brent[-2], eurusd[-2] = 2.29, 7953.50, 6876.45, 67.90, 1.1729
 wti[-1], wti[-2] = 63.10, 64.02
+dubai[-1], dubai[-2] = 67.40, 68.15
 spread[-1], spread[-2] = 74.0, 72.0
 fr10[-1], fr10[-2] = 3.42, 3.37
 
@@ -137,6 +139,7 @@ H = {
     "spx": "Indice des 500 grandes entreprises américaines, pondéré par la capitalisation. Dominé par la technologie, il est sensible aux taux longs. Il clôture à 22 h heure de Paris.",
     "brent": "Prix du baril de pétrole de la mer du Nord (contrat à terme le plus proche), en dollars. Une hausse durable pèse sur l'inflation, puis sur les points morts et les taux.",
     "wti": "Prix du baril de pétrole américain (contrat à terme le plus proche), en dollars. Il suit en général le Brent, avec un écart lié au transport et aux stocks américains.",
+    "dubai": "Prix du brut de Dubaï (évaluation Platts), en dollars par baril : la référence du pétrole du Moyen-Orient vendu vers l'Asie. Son écart avec le Brent renseigne sur l'équilibre entre l'offre du Golfe et la demande asiatique.",
     "eurusd": "Nombre de dollars pour un euro : une hausse signifie que l'euro s'apprécie. Il réagit à l'écart de taux entre zone euro et États-Unis. Un euro fort rend le pétrole moins cher en euros.",
     "be10_us": "Écart entre le Treasury 10 ans classique et le Treasury indexé sur l'inflation (TIPS). Il donne l'inflation moyenne anticipée par le marché sur 10 ans, à une prime de risque près. La Fed le surveille pour vérifier que les anticipations restent ancrées autour de 2 %.",
 }
@@ -145,12 +148,11 @@ indicators = {
     "fr10": ind("fr10", "OAT 10 ans", "France", "rate", "%", 2, "bp", fr10, "Banque de France", "https://webstat.banque-france.fr", H["fr10"]),
     "de10": ind("de10", "Bund 10 ans", "Allemagne", "rate", "%", 2, "bp", de10, "Bundesbank", "https://www.bundesbank.de", H["de10"]),
     "us10": ind("us10", "Treasury 10 ans", "États-Unis", "rate", "%", 2, "bp", us10, "US Treasury", "https://home.treasury.gov", H["us10"]),
-    "spread_fr_de_10": ind("spread_fr_de_10", "Spread OAT − Bund", "10 ans", "spread", "pb", 0, "bp", spread, "Calcul", "", H["spread_fr_de_10"]),
-    "de2": ind("de2", "Schatz 2 ans", "Allemagne", "rate", "%", 2, "bp", de2, "Bundesbank", "https://www.bundesbank.de", H["de2"]),
-    "us2": ind("us2", "Treasury 2 ans", "États-Unis", "rate", "%", 2, "bp", us2, "US Treasury", "https://home.treasury.gov", H["us2"]),
+    "spread_fr_de_10": ind("spread_fr_de_10", "Spread OAT − Bund", "10 ans", "spread", "bp", 0, "bp", spread, "Calcul", "", H["spread_fr_de_10"]),
     "cac40": ind("cac40", "CAC 40", "Paris", "index", "", 2, "pct", cac, "Source de marché", "", H["cac40"]),
     "spx": ind("spx", "S&P 500", "New York", "index", "", 2, "pct", spx, "Source de marché", "", H["spx"]),
     "brent": ind("brent", "Brent", "$ / baril", "price", "$", 2, "pct", brent, "Source de marché", "", H["brent"]),
+    "dubai": ind("dubai", "Dubai", "$ / baril", "price", "$", 2, "pct", dubai, "Source de marché (à confirmer)", "", H["dubai"]),
     "wti": ind("wti", "WTI", "$ / baril", "price", "$", 2, "pct", wti, "Source de marché", "", H["wti"],
                status="stale", last_date=Y(2026, 9, 29), prev_date=Y(2026, 9, 26)),
     "eurusd": ind("eurusd", "Euro / dollar", "EUR/USD", "fx", "", 4, "pct", eurusd, "BCE", "https://data.ecb.europa.eu", H["eurusd"]),
@@ -160,9 +162,10 @@ indicators = {
 indicators["wti"]["status_note"] = "Source indisponible ce matin : dernière valeur connue."
 
 groups = [
-    {"title": "Taux souverains", "ids": ["fr10", "de10", "us10", "spread_fr_de_10", "de2", "us2"]},
+    {"title": "Taux souverains à 10 ans", "ids": ["fr10", "de10", "us10", "spread_fr_de_10"]},
     {"title": "Actions", "ids": ["cac40", "spx"]},
-    {"title": "Pétrole, change et inflation anticipée", "ids": ["brent", "wti", "eurusd", "be10_us"]},
+    {"title": "Pétrole", "ids": ["brent", "wti", "dubai"]},
+    {"title": "Change et inflation anticipée", "ids": ["eurusd", "be10_us"]},
 ]
 
 # --- Courbes ---
@@ -282,7 +285,7 @@ infl = [
 
 commentary = {
     "available": True,
-    "hier": "Les taux longs européens ont monté hier : l'OAT 10 ans gagne 5 pb à 3,42 % et le Bund 3 pb à 2,68 %, si bien que le spread OAT − Bund s'élargit à 74 pb après [la présentation du projet de budget](https://www.example.com/budget). Aux États-Unis, le 10 ans prend 3 pb à 4,12 % tandis que le 2 ans recule légèrement, ce qui pentifie la courbe. Les actions ont malgré tout progressé : CAC 40 +0,74 %, S&P 500 +0,42 %, portés par la technologie. Le Brent a perdu 1,5 % à 66,85 $ après [des chiffres de stocks américains plus élevés que prévu](https://www.example.com/stocks). L'euro s'est légèrement apprécié à 1,1742 $.",
+    "hier": "Les taux longs européens ont monté hier : l'OAT 10 ans gagne 5 bp à 3,42 % et le Bund 3 bp à 2,68 %, si bien que le spread OAT − Bund s'élargit à 74 bp après [la présentation du projet de budget](https://www.example.com/budget). Aux États-Unis, le 10 ans prend 3 bp à 4,12 % tandis que le 2 ans recule légèrement, ce qui pentifie la courbe. Les actions ont malgré tout progressé : CAC 40 +0,74 %, S&P 500 +0,42 %, portés par la technologie. Le Brent a perdu 1,5 % à 66,85 $ après [des chiffres de stocks américains plus élevés que prévu](https://www.example.com/stocks). L'euro s'est légèrement apprécié à 1,1742 $.",
     "implications": "La hausse des taux longs sans hausse des taux courts est un « bear steepening » : le marché ne change pas d'avis sur la BCE ou la Fed, mais réclame une prime de terme un peu plus élevée pour prêter à 10 ans. Côté France, l'élargissement du spread reflète un risque budgétaire spécifique, pas un mouvement de la zone euro. La baisse du pétrole va dans l'autre sens : elle modère l'inflation attendue (le point mort américain reste stable à 2,31 %), ce qui limite la hausse des taux. Que les actions montent malgré des taux plus hauts suggère que les investisseurs y voient surtout le signe d'une économie solide.",
     "agenda": [
         {"heure": "08:45", "pays": "FR", "evenement": "Inflation de septembre, estimation provisoire (Insee)"},
@@ -298,7 +301,7 @@ commentary = {
 }
 
 essentiel = [
-    "Les taux longs européens montent : l'OAT 10 ans gagne 5 pb à 3,42 % et le spread avec le Bund s'élargit à 74 pb.",
+    "Les taux longs européens montent : l'OAT 10 ans gagne 5 bp à 3,42 % et le spread avec le Bund s'élargit à 74 bp.",
     "Les actions tiennent bon malgré la hausse des taux, avec un CAC 40 en progression de 0,74 %.",
     "À suivre aujourd'hui : l'inflation de septembre en France à 8 h 45 et en zone euro à 11 h.",
 ]

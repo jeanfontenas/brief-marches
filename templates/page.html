@@ -34,6 +34,8 @@
   --c-total: #2a78d6;
   --c-core: #eb6834;
   --c-spark: #1f56a4;
+  --up: #2f9e50;
+  --down: #c22d2d;
   --f-display: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
   --f-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --radius: 14px;
@@ -49,7 +51,7 @@
     --bg: #0b0e13; --surface: #141920; --surface-2: #1b222b; --ink: #edf1f6; --ink-2: #b4bdca; --muted: #828d9b;
     --line: #262e39; --grid: #1f2630; --axis: #4a5462; --accent: #7eb0f2; --accent-ink: #0b0e13; --chip: #1f2731;
     --nav-bg: rgba(11, 14, 19, 0.85); --warn: #e0a930;
-    --c-fr: #3987e5; --c-de: #d95926; --c-us: #199e70; --c-ea: #9085e9; --c-total: #3987e5; --c-core: #d95926; --c-spark: #7eb0f2;
+    --c-fr: #3987e5; --c-de: #d95926; --c-us: #199e70; --c-ea: #9085e9; --c-total: #3987e5; --c-core: #d95926; --c-spark: #7eb0f2; --up: #46ad5b; --down: #cc3b3b;
     color-scheme: dark;
   }
 }
@@ -57,7 +59,7 @@
   --bg: #0b0e13; --surface: #141920; --surface-2: #1b222b; --ink: #edf1f6; --ink-2: #b4bdca; --muted: #828d9b;
   --line: #262e39; --grid: #1f2630; --axis: #4a5462; --accent: #7eb0f2; --accent-ink: #0b0e13; --chip: #1f2731;
   --nav-bg: rgba(11, 14, 19, 0.85); --warn: #e0a930;
-  --c-fr: #3987e5; --c-de: #d95926; --c-us: #199e70; --c-ea: #9085e9; --c-total: #3987e5; --c-core: #d95926; --c-spark: #7eb0f2;
+  --c-fr: #3987e5; --c-de: #d95926; --c-us: #199e70; --c-ea: #9085e9; --c-total: #3987e5; --c-core: #d95926; --c-spark: #7eb0f2; --up: #46ad5b; --down: #cc3b3b;
   color-scheme: dark;
 }
 
@@ -309,11 +311,11 @@ window.__loadFallbackChart = function () {
   function fmtLevel(ind, v) {
     if (v == null || isNaN(v)) return '—';
     if (ind.unit === '%') return num(v, ind.decimals) + NNBSP + '%';
-    if (ind.unit === 'pb') return num(v, 0) + NBSP + 'pb';
+    if (ind.unit === 'bp') return num(v, 0) + NBSP + 'bp';
     if (ind.unit === '$') return num(v, ind.decimals) + NBSP + '$';
     return num(v, ind.decimals);
   }
-  function bp(v) { return signed(Math.round(v), 0) + NBSP + 'pb'; }
+  function bp(v) { return signed(Math.round(v), 0) + NBSP + 'bp'; }
   function fmtChange(ind, c) { return ind.change_mode === 'bp' ? bp(c) : signed(c, 2) + NNBSP + '%'; }
   function rounded(ind, c) { return ind.change_mode === 'bp' ? Math.round(c) : Math.round(c * 100) / 100; }
   function ts(iso) {
@@ -402,7 +404,7 @@ window.__loadFallbackChart = function () {
   var C = {};
   function readColors() {
     var cs = getComputedStyle(document.documentElement);
-    ['ink', 'ink-2', 'muted', 'grid', 'axis', 'surface', 'c-fr', 'c-de', 'c-us', 'c-ea', 'c-total', 'c-core', 'c-spark'].forEach(function (k) {
+    ['ink', 'ink-2', 'muted', 'grid', 'axis', 'surface', 'up', 'down', 'c-fr', 'c-de', 'c-us', 'c-ea', 'c-total', 'c-core', 'c-spark'].forEach(function (k) {
       C[k] = cs.getPropertyValue('--' + k).trim();
     });
   }
@@ -567,14 +569,19 @@ window.__loadFallbackChart = function () {
       if (w.length < 2) { ro.textContent = P.length ? '' : 'Pas d\'historique'; return; }
       var first = w[0], last = w[w.length - 1], label = RANGES.filter(function (r) { return r[0] === cur; })[0][2];
       var span = (last.x - first.x) / DAY, wanted = RANGES.filter(function (r) { return r[0] === cur; })[0][1];
-      var delta = ind.change_mode === 'bp' ? (ind.unit === 'pb' ? last.y - first.y : (last.y - first.y) * 100) : (last.y / first.y - 1) * 100;
+      var delta = ind.change_mode === 'bp' ? (ind.unit === 'bp' ? last.y - first.y : (last.y - first.y) * 100) : (last.y / first.y - 1) * 100;
       var prefix = span < wanted * 0.9 && cur !== '5A' ? 'Depuis le ' + dShort(first.x) : 'Sur ' + label;
       if (cur === '5A' && span < 5 * 365 * 0.95) prefix = 'Depuis le ' + dMed(first.x);
       ro.textContent = prefix + ' : ' + (ind.change_mode === 'bp' ? bp(delta) : signed(delta, 1) + NNBSP + '%');
     }
+    // Couleur du mini-graphique : vert si hausse sur la période affichée, rouge si baisse.
+    function trendColor(w) {
+      if (w.length < 2 || w[w.length - 1].y === w[0].y) return C['c-spark'];
+      return w[w.length - 1].y > w[0].y ? C.up : C.down;
+    }
     var rec = register(function () {
       if (!P.length) return null;
-      var col = C['c-spark'];
+      var col = trendColor(windowPts());
       var opts = baseOptions({ x: { type: 'linear', bounds: 'data', display: false }, y: { display: false, grace: '6%' } }, function (dp) {
         if (!dp) { defaultReadout(); return; }
         ro.classList.add('live');
@@ -596,7 +603,12 @@ window.__loadFallbackChart = function () {
       b.addEventListener('click', function () {
         cur = r[0];
         seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-        if (rec.chart) { rec.chart.data.datasets[0].data = windowPts(); rec.chart.update('none'); }
+        if (rec.chart) {
+          var w = windowPts(), ds0 = rec.chart.data.datasets[0], col = trendColor(w);
+          ds0.data = w; ds0.borderColor = col; ds0.backgroundColor = alpha(col, 0.1);
+          ds0.pointHoverBackgroundColor = col;
+          rec.chart.update('none');
+        }
         defaultReadout();
       });
       seg.appendChild(b);
@@ -704,7 +716,7 @@ window.__loadFallbackChart = function () {
   /* ---------- Pente 10 ans − 2 ans ---------- */
   var SL = D.slope;
   if (SL && SL.series) {
-    var ps = panel('Pente 10 ans − 2 ans, sur 2 ans', 'En points de base. Sous la ligne zéro : courbe inversée.', 'slope', 'Pente 10 ans − 2 ans', SL.help);
+    var ps = panel('Pente 10 ans − 2 ans, sur 2 ans', 'En points de base (bp). Sous la ligne zéro : courbe inversée.', 'slope', 'Pente 10 ans − 2 ans', SL.help);
     var NAMES = { fr: 'France', de: 'Allemagne', us: 'États-Unis' };
     var keys = Object.keys(SL.series);
     var SP = keys.map(function (k) { return pts(SL.series[k]); });
@@ -714,7 +726,7 @@ window.__loadFallbackChart = function () {
       lgs.set(head, SP.map(function (P) {
         if (!P.length) return '—';
         var p = x == null ? P[P.length - 1] : nearest(P, x);
-        return p && Math.abs(p.x - (x == null ? p.x : x)) < 5 * DAY ? signed(Math.round(p.y), 0) + NBSP + 'pb' : '—';
+        return p && Math.abs(p.x - (x == null ? p.x : x)) < 5 * DAY ? signed(Math.round(p.y), 0) + NBSP + 'bp' : '—';
       }));
     }
     showSlope(null);
