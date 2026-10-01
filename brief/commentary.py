@@ -22,7 +22,7 @@ Règles sur les chiffres (impératives) :
 Recherche web (indispensable) : explique les mouvements de la séance couverte à partir d'articles publiés ce jour-là ou le lendemain matin, et établis l'agenda du jour.
 - Fais des requêtes courtes avec la date en toutes lettres, en français et en anglais (exemples fournis avec les DONNÉES).
 - Sources acceptées : banques centrales, instituts statistiques, Agence France Trésor, agences et presse économique (Reuters, AP, AFP, Bloomberg, CNBC, MarketWatch, Les Échos, Le Monde, BFM Bourse, Boursorama, Zonebourse, L'Agefi, Le Figaro Bourse, Investir).
-- Cite chaque explication par un lien [texte](url) vers la page trouvée, et liste ces pages dans « sources ». Ne dis pas que tu n'as rien trouvé si des résultats pertinents existent ; si une explication reste incertaine, dis-le pour ce point seulement.
+- Cite chaque explication par un lien Markdown [texte](url) vers la page trouvée (jamais de balises <cite> ni d'index de citation), et liste ces pages dans « sources ». Ne dis pas que tu n'as rien trouvé si des résultats pertinents existent ; si une explication reste incertaine, dis-le pour ce point seulement.
 
 Style : français, ton clair et pédagogique, phrases courtes, format français des nombres (« 3,42 % », « +5 bp », virgule décimale). Écris « bp » pour les points de base. Pas de recommandation d'investissement.
 
@@ -69,7 +69,7 @@ def extract_json(text: str) -> dict | None:
 
 def clean(obj: dict, citations: list[dict]) -> dict:
     def s(x) -> str:
-        return str(x or "").strip()
+        return strip_cite_tags(str(x or "")).strip()
     out = {
         "available": True,
         "essentiel": [s(x) for x in (obj.get("essentiel") or []) if s(x)][:3],
@@ -93,6 +93,14 @@ def clean(obj: dict, citations: list[dict]) -> dict:
             out["sources"].append({"titre": s(src.get("titre") or src.get("title") or url), "url": url})
     out["sources"] = out["sources"][:12]
     return out
+
+
+CITE_TAG = re.compile(r"[<(]\s*/?\s*cite\b[^>]*>")
+
+
+def strip_cite_tags(text: str) -> str:
+    """Retire les balises de citation brutes (<cite index="…">…</cite>) en gardant le texte cité."""
+    return re.sub(r"  +", " ", CITE_TAG.sub("", text))
 
 
 def _text_and_citations(content) -> tuple[str, list[dict]]:
@@ -189,8 +197,9 @@ def generate(cfg: dict, payload: dict, today: date, cost_log: Path) -> dict:
         tools[0]["response_inclusion"] = "excluded"
     if cc.get("domaines_exclus"):
         tools[0]["blocked_domains"] = list(cc["domaines_exclus"])
+    # Cache automatique : les tours internes de la recherche web relisent le même début de conversation à 10 % du prix.
     params = dict(model=model, max_tokens=int(cc.get("max_tokens", 16000)), system=SYSTEM, tools=tools,
-                  output_config={"effort": cc.get("effort", "medium")})
+                  output_config={"effort": cc.get("effort", "medium")}, cache_control={"type": "ephemeral"})
     total_cost, use_fallbacks = 0.0, True
     try:
         for _ in range(4):  # la recherche web peut renvoyer « pause_turn » : on relance la suite du tour

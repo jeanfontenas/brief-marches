@@ -348,3 +348,10 @@ def test_exemples_de_requetes_dates_du_jour():
     ex = commentary.search_examples(p)
     assert "Bourse de Paris clôture 30 septembre 2026" in ex
     assert "Treasury yields September 30 2026" in ex and "agenda économique 1er octobre 2026" in ex
+
+
+def test_balises_de_citation_retirees():
+    raw = 'Paris : (cite index="3-3">le CAC 40 a reculé</cite>, <cite index="2-7">inflation à 3 %</cite>.'
+    out = commentary.clean({"essentiel": [raw], "hier": raw, "implications": "", "agenda": [], "sources": []}, [])
+    assert out["hier"] == "Paris : le CAC 40 a reculé, inflation à 3 %."
+    assert "cite" not in out["essentiel"][0]
