@@ -22,6 +22,21 @@ Dans `config.yaml`, section `general` :
 Le calcul démarre environ 50 minutes avant (`avance_minutes`), car GitHub lance parfois les tâches avec du retard. L'heure d'été et l'heure d'hiver sont gérées automatiquement.
 Les créneaux de lancement couvrent une heure cible entre environ 6 h 45 et 10 h 30. Pour une heure en dehors de cette plage, il faut aussi modifier la ligne `cron` de `.github/workflows/brief.yml` (demande-moi).
 
+**Pense aussi à cron-job.org** : l'heure de lancement de la tâche doit être au moins 50 minutes avant `heure_cible` (7 h 12 pour 8 h). Pour un brief à 9 h, mets par exemple 8 h 12 (voir « Déclenchement automatique » ci-dessous).
+
+### Déclenchement automatique (cron-job.org)
+Le planning intégré de GitHub n'est pas fiable : il retarde ou saute parfois des créneaux. Le brief est donc lancé chaque matin par **cron-job.org** (gratuit), qui appelle GitHub à 7 h 12, heure de Paris, du lundi au vendredi. Le planning GitHub reste en secours. Un seul brief est produit par jour, quel que soit le déclencheur qui passe en premier.
+
+Réglages de la tâche sur https://console.cron-job.org :
+- **URL** : `https://api.github.com/repos/jeanfontenas/brief-marches/actions/workflows/brief.yml/dispatches`
+- **Planification** : lundi à vendredi, 7 h 12, fuseau `Europe/Paris`
+- **Méthode** : `POST`
+- **En-têtes** : `Accept: application/vnd.github+json`, `Authorization: Bearer <jeton GitHub>`, `X-GitHub-Api-Version: 2022-11-28`, `Content-Type: application/json`
+- **Corps** : `{"ref":"main","inputs":{"automatique":"true"}}`
+
+Le jeton GitHub est un *fine-grained token* limité au dépôt `brief-marches`, avec la seule permission **Actions : Read and write**. Il permet uniquement de lancer le brief, pas de lire les secrets ni de modifier le code.
+Pour **mettre en pause** les lancements : bouton d'activation de la tâche sur cron-job.org (ou `en_pause: true` dans `config.yaml`, qui arrête tout).
+
 ### Ajouter un indicateur (Euro Stoxx 50, DAX, Nasdaq…)
 Trois exemples sont déjà prêts dans `config.yaml` : `eurostoxx50`, `dax` et `nasdaq`. Pour en afficher un, ajoute son identifiant dans un groupe :
 ```yaml
@@ -70,6 +85,7 @@ Ne colle jamais une clé API dans un message.
 | FRED | pas d'expiration | rien |
 | Banque de France (Webstat) | pas d'expiration connue | rien. Si elle cesse de marcher, le brief passe en mode sans clé (dernières valeurs seulement) |
 | ntfy | pas de clé, seulement le nom secret du canal | rien |
+| Jeton GitHub (cron-job.org) | celle choisie à la création | avant l'expiration, GitHub t'envoie un e-mail : crée un nouveau jeton (mêmes réglages) et remplace-le dans l'en-tête `Authorization` de la tâche cron-job.org. En attendant, le planning GitHub prend le relais |
 
 Pour remplacer une clé : Settings > Secrets and variables > Actions, puis clique sur le crayon à côté du secret, colle la nouvelle valeur et clique sur **Update secret**.
 

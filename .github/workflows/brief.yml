@@ -1,10 +1,12 @@
 # Brief marchés : génération quotidienne, publication sur GitHub Pages et notification ntfy.
 #
-# Les heures « cron » sont en UTC. Le workflow démarre toutes les 30 minutes entre
-# 4 h et 8 h UTC en semaine ; le portier (brief/gate.py) ne génère le brief qu'au
-# premier créneau qui suit « heure_cible − avance_minutes » (heure de Paris, voir
-# config.yaml). Les autres créneaux s'arrêtent en quelques secondes. Le passage à
-# l'heure d'été ou d'hiver est donc automatique.
+# Déclenchement principal : cron-job.org appelle GitHub à 7 h 12 (heure de Paris) du
+# lundi au vendredi, avec « automatique » coché (voir le README).
+# Secours : le planning GitHub ci-dessous (heures en UTC, toutes les 30 minutes entre
+# 4 h et 8 h UTC en semaine), car GitHub retarde ou saute parfois ces créneaux.
+# Dans les deux cas, le portier (brief/gate.py) ne génère le brief qu'une fois par jour,
+# au premier lancement qui suit « heure_cible − avance_minutes » (heure de Paris, voir
+# config.yaml). Les autres lancements s'arrêtent en quelques secondes.
 name: Brief marchés
 
 on:
@@ -14,6 +16,10 @@ on:
     inputs:
       sans_commentaire:
         description: "Ne pas appeler Claude (test gratuit)"
+        type: boolean
+        default: false
+      automatique:
+        description: "Lancement automatique externe : ne génère qu'à l'heure prévue et une seule fois par jour"
         type: boolean
         default: false
       reutiliser_commentaire:
@@ -40,10 +46,14 @@ jobs:
     steps:
       - name: Récupérer le dépôt
         uses: actions/checkout@v7
+        with:
+          # Dernière version de la branche (et non celle du déclenchement) : un lancement
+          # mis en file d'attente voit ainsi le brief déjà fait par le précédent.
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Est-ce l'heure ?
         id: gate
-        run: python3 -m brief.gate ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+        run: python3 -m brief.gate ${{ github.event_name == 'workflow_dispatch' && !inputs.automatique && '--force' || '' }}
 
       - name: Installer Python
         if: steps.gate.outputs.go == 'true'
