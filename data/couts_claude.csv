@@ -19,3 +19,4 @@ date,modele,tokens_entree,tokens_cache_lus,tokens_sortie,recherches_web,cout_usd
 2026-10-23,claude-opus-5-5,6,7734,5057,4,0.3627
 2026-10-26,claude-opus-5-5,6,7772,3928,4,0.3606
 2026-10-27,claude-opus-5-5,6,7733,4499,4,0.3477
+2026-10-28,claude-opus-5-5,8,43332,5475,4,0.3905
